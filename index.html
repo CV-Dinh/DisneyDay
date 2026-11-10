@@ -143,9 +143,9 @@
         <!-- Anaheim PST Clock & Park Hopper Status -->
         <div class="text-right flex flex-col items-end">
           <div id="anaheimClock" class="font-mono text-xs font-bold text-amber-300 tracking-wider">--:-- PST</div>
-          <div id="hopperStatusBadge" class="text-[10px] text-emerald-400 font-semibold flex items-center justify-end gap-1 mt-0.5">
+          <div id="cloudSyncStatus" class="text-[10px] text-emerald-400 font-semibold flex items-center justify-end gap-1 mt-0.5">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span id="hopperStatusText">Hop @ 11:00 AM</span>
+            <span id="cloudStatusText">Cloud Sync</span>
           </div>
         </div>
       </div>
@@ -1062,6 +1062,16 @@
     <input type="file" id="generalPhotoPicker" accept="image/*" class="hidden">
 
   </div>
+
+  <!-- Global Cloud Status Helper -->
+  <script>
+    window.setCloudStatus = function(msg, colorClass = 'text-emerald-400') {
+      const el = document.getElementById('cloudSyncStatus');
+      if (!el) return;
+      el.className = `text-[10px] font-semibold flex items-center justify-end gap-1 mt-0.5 ${colorClass}`;
+      el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${colorClass.replace('text-', 'bg-')} animate-pulse"></span><span>${msg}</span>`;
+    };
+  </script>
 
   <!-- ================= FLOATING TOAST NOTIFICATION ================= -->
   <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full glass-card border border-amber-400/50 text-xs font-semibold text-white shadow-xl opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-2">
@@ -2531,6 +2541,170 @@
       renderAlbumView();
       updateAnaheimClock();
     });
+  </script>
+
+  <!-- ================= FIREBASE REAL-TIME CLOUD SYNC ================= -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getFirestore, 
+      doc, 
+      setDoc, 
+      updateDoc, 
+      deleteField, 
+      onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Firebase Project Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAoSe3ptwtsq-AznzSy8hk2F6WrbRGumeM",
+      authDomain: "vegassayhi.firebaseapp.com",
+      projectId: "vegassayhi",
+      storageBucket: "vegassayhi.firebasestorage.app",
+      messagingSenderId: "97224365863",
+      appId: "1:97224365863:web:b9f677d5c6b8b464663b02",
+      measurementId: "G-Z6ZBGSWBFJ"
+    };
+
+    let app, db;
+    try {
+      app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      window.setCloudStatus('Cloud Sync', 'text-emerald-400');
+    } catch (e) {
+      console.warn("Firebase initialization notice:", e);
+      window.setCloudStatus('Local Mode', 'text-slate-400');
+    }
+
+    if (db) {
+      // 1. Real-time Listener for Ridden Rides Checkmarks
+      onSnapshot(doc(db, "disney_trip", "ridden_rides"), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (Array.isArray(data.rides)) {
+            const incomingSet = new Set(data.rides);
+            if (JSON.stringify(Array.from(incomingSet).sort()) !== JSON.stringify(Array.from(riddenRidesSet).sort())) {
+              riddenRidesSet = incomingSet;
+              try {
+                localStorage.setItem('disney_ridden_rides_v1', JSON.stringify(Array.from(riddenRidesSet)));
+              } catch (err) {}
+              renderAllRidesView();
+            }
+          }
+        }
+      }, (err) => console.warn("Rides cloud sync notice:", err));
+
+      // 2. Real-time Listener for Check-Ins & Instagram Stories
+      onSnapshot(doc(db, "disney_trip", "checkins"), (docSnap) => {
+        if (docSnap.exists()) {
+          const cloudCheckins = docSnap.data() || {};
+          let changed = false;
+
+          Object.keys(cloudCheckins).forEach(slotId => {
+            const remoteEntry = cloudCheckins[slotId];
+            const localEntry = checkinData[slotId];
+            if (!localEntry || JSON.stringify(localEntry) !== JSON.stringify(remoteEntry)) {
+              checkinData[slotId] = remoteEntry;
+              changed = true;
+            }
+          });
+
+          // Check for deleted items
+          Object.keys(checkinData).forEach(slotId => {
+            if (!cloudCheckins[slotId]) {
+              delete checkinData[slotId];
+              changed = true;
+            }
+          });
+
+          if (changed) {
+            saveStorage();
+            renderTimeline();
+            renderAllRidesView();
+            renderAlbumView();
+          }
+        }
+      }, (err) => console.warn("Check-in cloud sync notice:", err));
+
+      // 3. Real-time Listener for Timeline Schedule Cards
+      onSnapshot(doc(db, "disney_trip", "itinerary"), (docSnap) => {
+        if (docSnap.exists()) {
+          const cloudPlan = docSnap.data();
+          if (cloudPlan && Array.isArray(cloudPlan.cards) && cloudPlan.cards.length > 0) {
+            if (JSON.stringify(disneyCards) !== JSON.stringify(cloudPlan.cards)) {
+              disneyCards = cloudPlan.cards;
+              saveStorage();
+              renderTimeline();
+            }
+          }
+        }
+      }, (err) => console.warn("Itinerary cloud sync notice:", err));
+    }
+
+    // Cloud Sync Global API Hooks
+    window.syncRiddenRidesToFirebase = async function() {
+      if (!db) return;
+      try {
+        window.setCloudStatus('Syncing...', 'text-amber-400');
+        await setDoc(doc(db, "disney_trip", "ridden_rides"), {
+          rides: Array.from(riddenRidesSet),
+          updatedAt: Date.now()
+        }, { merge: true });
+        window.setCloudStatus('Cloud Sync', 'text-emerald-400');
+      } catch (err) {
+        console.error("Firebase sync error:", err);
+        window.setCloudStatus('Sync Error', 'text-rose-400');
+      }
+    };
+
+    window.syncCheckinToFirebase = async function(slotId, checkinObj) {
+      if (!db) return;
+      try {
+        window.setCloudStatus('Syncing Story...', 'text-amber-400');
+        await setDoc(doc(db, "disney_trip", "checkins"), {
+          [slotId]: checkinObj
+        }, { merge: true });
+        window.setCloudStatus('Cloud Sync', 'text-emerald-400');
+      } catch (err) {
+        console.error("Firebase sync checkin error:", err);
+      }
+    };
+
+    window.deleteCheckinFromFirebase = async function(slotId) {
+      if (!db) return;
+      try {
+        await updateDoc(doc(db, "disney_trip", "checkins"), {
+          [slotId]: deleteField()
+        });
+      } catch (err) {
+        console.error("Firebase delete checkin error:", err);
+      }
+    };
+
+    window.syncItineraryToFirebase = async function(cardsList) {
+      if (!db) return;
+      try {
+        await setDoc(doc(db, "disney_trip", "itinerary"), {
+          cards: cardsList,
+          updatedAt: Date.now()
+        }, { merge: true });
+      } catch (err) {
+        console.error("Firebase sync itinerary error:", err);
+      }
+    };
+
+    // Attach hooks to state changes
+    const originalSaveRidesStorage = window.saveRidesStorage;
+    window.saveRidesStorage = function() {
+      if (typeof originalSaveRidesStorage === 'function') originalSaveRidesStorage();
+      window.syncRiddenRidesToFirebase();
+    };
+
+    const originalSaveStorage = window.saveStorage;
+    window.saveStorage = function() {
+      if (typeof originalSaveStorage === 'function') originalSaveStorage();
+      if (window.syncItineraryToFirebase) window.syncItineraryToFirebase(disneyCards);
+    };
   </script>
 </body>
 </html>
