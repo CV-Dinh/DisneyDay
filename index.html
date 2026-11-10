@@ -17,6 +17,9 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
+  <!-- HEIC to JPEG Converter for iPhone / Samsung Camera Photos -->
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -1058,8 +1061,39 @@
       </div>
     </div>
 
-    <!-- Hidden Native File Inputs -->
+    <!-- Hidden Native File Inputs (Direct Camera & Gallery) -->
+    <!-- Direct Camera Shutter (Launches phone camera immediately) -->
+    <input type="file" id="directCameraInput" accept="image/*" capture="environment" class="hidden">
+    <!-- Photo Gallery Picker -->
     <input type="file" id="generalPhotoPicker" accept="image/*" class="hidden">
+
+    <!-- ================= NATIVE MOBILE ACTION SHEET: CAMERA VS GALLERY ================= -->
+    <div id="photoSourceModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end justify-center p-3 sm:p-4" onclick="closePhotoSourceModal(event)">
+      <div class="w-full max-w-sm bg-disney-card border border-white/15 rounded-3xl p-4 space-y-2 shadow-2xl" onclick="event.stopPropagation()">
+        <div class="text-center pb-2 border-b border-white/10">
+          <h4 id="photoSourceTitle" class="text-sm font-bold text-white">Add Disney Story</h4>
+          <p class="text-[11px] text-slate-400">Choose how to capture your magical memory</p>
+        </div>
+
+        <div class="space-y-2 pt-1">
+          <!-- Take Live Photo Button -->
+          <button onclick="pickFromLiveCamera()" class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-300 text-disney-midnight font-bold text-xs tap-effect flex items-center justify-center gap-2 shadow-lg shadow-amber-400/20">
+            <i class="ph-bold ph-camera text-base"></i>
+            <span>Take Live Photo (Open Camera)</span>
+          </button>
+
+          <!-- Choose from Gallery Button -->
+          <button onclick="pickFromPhotoGallery()" class="w-full py-3 px-4 rounded-2xl bg-slate-800 border border-white/10 text-white font-semibold text-xs tap-effect flex items-center justify-center gap-2 hover:bg-slate-700">
+            <i class="ph-bold ph-image text-base text-cyan-400"></i>
+            <span>Choose from Photo Gallery</span>
+          </button>
+        </div>
+
+        <button onclick="closePhotoSourceModal(null, true)" class="w-full py-2 rounded-2xl bg-disney-midnight text-slate-400 font-medium text-xs tap-effect mt-1">
+          Cancel
+        </button>
+      </div>
+    </div>
 
   </div>
 
@@ -1196,16 +1230,42 @@
 
     let disneyCards = [];
 
-    // Image Compression Helper
+    // Image Compression Helper with HEIC Converter and Canvas Downscaler
     window.compressImageFile = async function(file, maxW = 900, maxH = 900, quality = 0.72) {
       if (!file) throw new Error("No file provided");
+
+      let processedBlob = file;
+
+      // 1. Detect if the file is HEIC / HEIF from an iPhone camera
+      const isHeic = file.type === 'image/heic' || 
+                     file.type === 'image/heif' || 
+                     /\.(heic|heif)$/i.test(file.name || '');
+
+      if (isHeic && typeof heic2any === 'function') {
+        try {
+          window.setCloudStatus('Converting HEIC...', 'text-amber-400');
+          const converted = await heic2any({
+            blob: file,
+            toType: 'image/jpeg',
+            quality: 0.82
+          });
+          processedBlob = Array.isArray(converted) ? converted[0] : converted;
+        } catch (heicErr) {
+          console.warn("heic2any fallback notice:", heicErr);
+        }
+      }
+
+      // 2. Decode using ObjectURL for maximum mobile RAM efficiency
       return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const img = new Image();
-          img.onload = function() {
+        const objectUrl = URL.createObjectURL(processedBlob);
+        const img = new Image();
+
+        img.onload = function() {
+          URL.revokeObjectURL(objectUrl);
+          try {
             let width = img.naturalWidth || img.width;
             let height = img.naturalHeight || img.height;
+
             if (width > maxW || height > maxH) {
               if (width > height) {
                 height = Math.round((height * maxW) / width);
@@ -1215,18 +1275,43 @@
                 height = maxH;
               }
             }
+
             const canvas = document.createElement('canvas');
             canvas.width = width;
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', quality));
-          };
-          img.onerror = () => reject(new Error("Image decode failed"));
-          img.src = e.target.result;
+
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(dataUrl);
+          } catch (err) {
+            reject(err);
+          }
         };
-        reader.onerror = () => reject(new Error("File read failed"));
-        reader.readAsDataURL(file);
+
+        img.onerror = function() {
+          URL.revokeObjectURL(objectUrl);
+          const reader = new FileReader();
+          reader.onload = function(re) {
+            const fallbackImg = new Image();
+            fallbackImg.onload = function() {
+              const canvas = document.createElement('canvas');
+              const w = Math.min(fallbackImg.width, maxW);
+              const h = Math.round((fallbackImg.height * w) / fallbackImg.width);
+              canvas.width = w;
+              canvas.height = h;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(fallbackImg, 0, 0, w, h);
+              resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            fallbackImg.onerror = () => reject(new Error("Unable to decode photo."));
+            fallbackImg.src = re.target.result;
+          };
+          reader.onerror = () => reject(new Error("File read failed"));
+          reader.readAsDataURL(processedBlob);
+        };
+
+        img.src = objectUrl;
       });
     };
 
@@ -1268,681 +1353,97 @@
       }
     }
 
-    // Anaheim Clock Ticker (PST)
-    function updateAnaheimClock() {
-      const clockEl = document.getElementById('anaheimClock');
-      if (!clockEl) return;
-      try {
-        const timeStr = new Intl.DateTimeFormat('en-US', {
-          timeZone: 'America/Los_Angeles',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        }).format(new Date());
-        clockEl.textContent = `${timeStr} PST`;
-      } catch (err) {
-        clockEl.textContent = '--:-- PST';
-      }
-    }
-    setInterval(updateAnaheimClock, 1000);
-
-    // Toast alert utility
-    function showToast(msg) {
-      const toast = document.getElementById('toast');
-      const toastMsg = document.getElementById('toastMsg');
-      if (!toast) return;
-      toastMsg.textContent = msg;
-      toast.classList.remove('opacity-0', 'pointer-events-none');
-      setTimeout(() => {
-        toast.classList.add('opacity-0', 'pointer-events-none');
-      }, 2500);
-    }
-
-    // Tab switcher
-    function switchTab(tabId) {
-      document.querySelectorAll('.tab-view').forEach(v => v.classList.add('hidden'));
-      document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('text-amber-400');
-        btn.classList.add('text-slate-400');
-        const icon = btn.querySelector('i');
-        if (icon) icon.className = icon.className.replace('ph-fill', 'ph-bold');
-      });
-
-      const activeView = document.getElementById('view-' + tabId);
-      if (activeView) activeView.classList.remove('hidden');
-
-      const activeBtn = document.getElementById('nav-' + tabId);
-      if (activeBtn) {
-        activeBtn.classList.remove('text-slate-400');
-        activeBtn.classList.add('text-amber-400');
-        const icon = activeBtn.querySelector('i');
-        if (icon) icon.className = icon.className.replace('ph-bold', 'ph-fill');
-      }
-
-      if (tabId === 'map') {
-        initResortMap();
-      }
-
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // Phase Switcher for Timeline
-    function switchPhase(phaseKey) {
-      activeCardPhase = phaseKey;
-      document.querySelectorAll('.phase-pill').forEach(btn => {
-        btn.classList.remove('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
-        btn.classList.add('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
-      });
-
-      const activePill = document.getElementById('pill-' + phaseKey);
-      if (activePill) {
-        activePill.classList.remove('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
-        activePill.classList.add('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
-      }
-
-      renderTimeline();
-    }
-
-    // Render Timeline Cards
-    function renderTimeline() {
-      const container = document.getElementById('timelineContainer');
-      if (!container) return;
-
-      let filteredCards = disneyCards;
-      if (activeCardPhase !== 'all') {
-        filteredCards = disneyCards.filter(c => c.phase === activeCardPhase);
-      }
-      filteredCards.sort((a, b) => (a.sortTime || '00:00').localeCompare(b.sortTime || '00:00'));
-
-      const completedStops = Object.keys(checkinData).filter(k => disneyCards.some(c => c.id === k)).length;
-      const totalStops = disneyCards.length;
-      const pct = Math.round((completedStops / (totalStops || 1)) * 100);
-
-      const progText = document.getElementById('progressStopsText');
-      const progBar = document.getElementById('stopsProgressBar');
-      if (progText) progText.textContent = `${completedStops} / ${totalStops}`;
-      if (progBar) progBar.style.width = `${pct}%`;
-
-      if (filteredCards.length === 0) {
-        container.innerHTML = `
-          <div class="glass-card rounded-2xl p-8 text-center space-y-2">
-            <h4 class="text-sm font-bold text-white">No stops in this phase</h4>
-            <p class="text-xs text-slate-400">Tap "+ Add Stop" to plan an attraction or event.</p>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = filteredCards.map(card => {
-        const checkin = checkinData[card.id];
-        const isCompleted = !!checkin;
-
-        let categoryBadge = '';
-        if (card.category === 'ropedrop') {
-          categoryBadge = `<span class="px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 text-[10px] font-bold font-mono border border-amber-400/30">Rope Drop Sprint</span>`;
-        } else if (card.category === 'llmp') {
-          categoryBadge = `<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold font-mono border border-purple-500/30">⚡ Lightning Lane</span>`;
-        } else {
-          categoryBadge = `<span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-bold font-mono border border-cyan-500/30">${card.tag || 'Strategy'}</span>`;
-        }
-
-        let mapButton = '';
-        if (card.mapStop) {
-          mapButton = `
-            <button onclick="flyToMapStop('${card.mapStop}')" class="tap-effect inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-amber-400/15 text-amber-300 border border-amber-400/30 font-semibold">
-              <i class="ph-bold ph-map-pin"></i> View on Map
-            </button>
-          `;
-        }
-
-        return `
-          <div class="glass-card rounded-2xl p-3.5 space-y-2 border-white/10 ${isCompleted ? 'border-emerald-500/30 bg-disney-midnight/90' : ''}">
-            <div class="flex items-start justify-between gap-2">
-              <div>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="text-xs font-mono font-bold text-amber-300">${card.timeLabel}</span>
-                  ${categoryBadge}
-                </div>
-                <h3 class="text-sm font-bold text-white mt-1">${card.title}</h3>
-                <p class="text-xs text-slate-300 mt-0.5 leading-relaxed">${card.desc}</p>
-                <div class="flex items-center gap-2 mt-2">
-                  ${mapButton}
-                  <button onclick="triggerCardPhotoCapture('${card.id}')" class="tap-effect inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-xl bg-slate-800 text-slate-200 border border-white/10 hover:border-amber-400/40 font-semibold">
-                    <div class="w-4 h-4 rounded-full story-ring-gradient p-[1px] flex items-center justify-center">
-                      <div class="w-full h-full bg-disney-midnight rounded-full flex items-center justify-center text-white text-[8px]">
-                        <i class="ph-bold ph-plus"></i>
-                      </div>
-                    </div>
-                    <span>Add Story</span>
-                  </button>
-                </div>
-              </div>
-              <button onclick="deleteTimelineCard('${card.id}')" class="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 hover:text-rose-400 flex items-center justify-center tap-effect border border-white/5" title="Delete">
-                <i class="ph-bold ph-trash text-xs"></i>
-              </button>
-            </div>
-            ${renderCardStoriesHtml(card.id, card.title)}
-          </div>
-        `;
-      }).join('');
-    }
-
-    // Helper to render Instagram Story highlights on timeline cards
-    function renderCardStoriesHtml(cardId, cardTitle) {
-      const checkin = checkinData[cardId];
-      if (!checkin) return '';
-
-      // Support both legacy single dataUrl and multi-photo story arrays
-      const photos = Array.isArray(checkin.photos) ? checkin.photos : (checkin.dataUrl ? [{
-        id: 'legacy-' + cardId,
-        dataUrl: checkin.dataUrl,
-        checkinTimestamp: checkin.timestamp || 'Today'
-      }] : []);
-
-      if (photos.length === 0) return '';
-
-      const latestPhoto = photos[photos.length - 1];
-      const bubblesHtml = photos.map((p, pIdx) => `
-        <div onclick="openTimelineStoryLightbox('${cardId}', ${pIdx})" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect group">
-          <div class="w-11 h-11 rounded-full story-ring-gradient p-[2px] shadow-md group-hover:scale-105 transition-transform">
-            <div class="w-full h-full bg-disney-midnight rounded-full p-[2px]">
-              <img src="${p.dataUrl}" alt="Story" class="w-full h-full object-cover rounded-full">
-            </div>
-          </div>
-          <span class="text-[9px] font-mono text-slate-300 mt-0.5 truncate max-w-[44px]">Story ${pIdx + 1}</span>
-        </div>
-      `).join('');
-
-      return `
-        <div class="mt-2.5 space-y-2 pt-2 border-t border-white/5">
-          <!-- Story Hero Preview -->
-          <div onclick="openTimelineStoryLightbox('${cardId}', ${photos.length - 1})" class="relative rounded-2xl overflow-hidden group cursor-pointer tap-effect border border-white/10 shadow-lg">
-            <img src="${latestPhoto.dataUrl}" alt="${cardTitle} Story" class="w-full h-32 object-cover group-hover:scale-102 transition-transform duration-300">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-between p-2.5">
-              <div class="flex items-center justify-between">
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-bold text-white border border-white/20 font-mono">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  ${photos.length} Stor${photos.length > 1 ? 'ies' : 'y'}
-                </span>
-                <button onclick="deleteCardStoryPhoto('${cardId}', '${latestPhoto.id}', event)" class="w-6 h-6 rounded-full bg-black/60 backdrop-blur-md text-slate-300 hover:text-rose-400 flex items-center justify-center text-xs tap-effect" title="Delete latest">
-                  <i class="ph-bold ph-trash"></i>
-                </button>
-              </div>
-              <div>
-                <p class="text-[10px] text-amber-300 font-mono flex items-center gap-1">
-                  <i class="ph-bold ph-clock"></i> ${latestPhoto.checkinTimestamp}
-                </p>
-                <p class="text-xs font-bold text-white tracking-tight">Tap to view full story ➔</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Highlight Avatars & Add Story Bubble -->
-          <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-            <div onclick="triggerCardPhotoCapture('${cardId}')" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect">
-              <div class="w-11 h-11 rounded-full border-2 border-dashed border-amber-400/60 bg-amber-400/5 flex items-center justify-center">
-                <div class="w-9 h-9 rounded-full bg-disney-midnight flex items-center justify-center text-amber-400">
-                  <i class="ph-bold ph-plus text-sm"></i>
-                </div>
-              </div>
-              <span class="text-[9px] text-amber-400 font-semibold mt-0.5">Add</span>
-            </div>
-            ${bubblesHtml}
-          </div>
-        </div>
-      `;
-    }
-
-    function openTimelineStoryLightbox(cardId, photoIdx = 0) {
-      const checkin = checkinData[cardId];
-      if (!checkin) return;
-      const photos = Array.isArray(checkin.photos) ? checkin.photos : [{
-        id: 'legacy-' + cardId,
-        dataUrl: checkin.dataUrl,
-        checkinTimestamp: checkin.timestamp || 'Today'
-      }];
-      if (!photos.length) return;
-
-      activeStoryRideId = cardId;
-      activeStoryPhotoIdx = Math.max(0, Math.min(photoIdx, photos.length - 1));
-      updateStoryLightboxUI();
-      document.getElementById('photoLightboxModal').classList.remove('hidden');
-    }
-
-    function deleteCardStoryPhoto(cardId, photoId, event) {
-      if (event) event.stopPropagation();
-      const checkin = checkinData[cardId];
-      if (!checkin) return;
-
-      if (confirm('Delete this story photo?')) {
-        if (Array.isArray(checkin.photos)) {
-          checkin.photos = checkin.photos.filter(p => p.id !== photoId);
-          if (checkin.photos.length === 0) delete checkinData[cardId];
-        } else {
-          delete checkinData[cardId];
-        }
-        closeLightbox(null, true);
-        saveStorage();
-        renderTimeline();
-        renderAlbumView();
-        showToast('Story photo removed');
-      }
-    }
-
-    function triggerCardPhotoCapture(cardId) {
-      photoTargetType = 'card';
-      photoTargetId = cardId;
-      activeRideForStory = null;
-      const input = document.getElementById('generalPhotoPicker');
-      input.value = '';
-      input.click();
-    }
-
-    function triggerFoodPhotoUpload(foodId) {
-      photoTargetType = 'food';
-      photoTargetId = foodId;
-      activeRideForStory = null;
-      const input = document.getElementById('generalPhotoPicker');
-      input.value = '';
-      input.click();
-    }
-
-    function previewFoodPhoto(foodId, title) {
-      const img = document.getElementById('img-' + foodId);
-      if (!img) return;
-      openLightboxManual(img.src, title, 'Food Recommendation');
-    }
-
-    function resetAllDiningPhotos() {
-      if (confirm('Reset custom dining photos?')) {
-        document.getElementById('img-jolly-holiday').src = 'https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=700&q=80';
-        document.getElementById('img-pym-test').src = 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=700&q=80';
-        document.getElementById('img-cozy-cone').src = 'https://images.unsplash.com/photo-1579954115545-a95591f28bfc?auto=format&fit=crop&w=700&q=80';
-        document.getElementById('img-bengal-bbq').src = 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=80';
-        showToast('Dining photos reset to default');
-      }
-    }
-
-    // Modal Add Stop
-    function openCardModal() {
-      const modal = document.getElementById('cardEditorModal');
-      document.getElementById('cardEditorForm').reset();
-      document.getElementById('editCardId').value = '';
-      document.getElementById('editCardSortTime').value = '08:00';
-      document.getElementById('editCardTimeLabel').value = '8:00 AM PST';
-      modal.classList.remove('hidden');
-    }
-
-    function closeCardModal(event, force = false) {
-      if (force || (event && event.target.id === 'cardEditorModal')) {
-        document.getElementById('cardEditorModal').classList.add('hidden');
-      }
-    }
-
-    function handleSaveCard(e) {
-      e.preventDefault();
-      const newCard = {
-        id: 'c-' + Date.now(),
-        phase: document.getElementById('editCardPhase').value,
-        sortTime: document.getElementById('editCardSortTime').value,
-        timeLabel: document.getElementById('editCardTimeLabel').value,
-        title: document.getElementById('editCardTitle').value,
-        category: document.getElementById('editCardCategory').value,
-        tag: document.getElementById('editCardTag').value || 'Stop',
-        desc: document.getElementById('editCardDesc').value,
-        mapStop: document.getElementById('editCardMapStop').value || null
-      };
-
-      disneyCards.push(newCard);
-      saveStorage();
-      renderTimeline();
-      closeCardModal(null, true);
-      showToast('New stop added to itinerary!');
-    }
-
-    function deleteTimelineCard(cardId) {
-      if (confirm('Delete this stop from the timeline?')) {
-        disneyCards = disneyCards.filter(c => c.id !== cardId);
-        delete checkinData[cardId];
-        saveStorage();
-        renderTimeline();
-        renderAlbumView();
-        showToast('Stop removed');
-      }
-    }
-
-    // ================= LLMP CONTROL DECK SIMULATION =================
-    function renderLLMPDeck() {
-      const activeContainer = document.getElementById('activeLLContainer');
-      const countLabel = document.getElementById('activeLLCount');
-      const badge = document.getElementById('llmpActiveBadge');
-
-      if (countLabel) countLabel.textContent = `${simulatedLLMPPasses.length} pass${simulatedLLMPPasses.length === 1 ? '' : 'es'} held`;
-      if (badge) {
-        if (simulatedLLMPPasses.length > 0) badge.classList.remove('hidden');
-        else badge.classList.add('hidden');
-      }
-
-      if (!activeContainer) return;
-
-      if (simulatedLLMPPasses.length === 0) {
-        activeContainer.innerHTML = `
-          <div class="glass-card rounded-2xl p-4 text-center border-dashed border-white/20">
-            <p class="text-xs text-slate-400">No active passes held right now. Tap "Simulate Booking LLMP" above!</p>
-          </div>
-        `;
-        return;
-      }
-
-      activeContainer.innerHTML = simulatedLLMPPasses.map(pass => `
-        <div class="glass-card rounded-2xl p-3.5 border-purple-500/30 bg-purple-950/20 flex items-center justify-between gap-3">
-          <div>
-            <div class="flex items-center gap-1.5">
-              <span class="px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-300 font-mono text-[9px] font-bold">${pass.park}</span>
-              <h4 class="text-xs font-bold text-white">${pass.ride}</h4>
-            </div>
-            <p class="text-[11px] text-amber-300 font-mono mt-0.5">Return: ${pass.windowStart} – ${pass.windowEnd}</p>
-          </div>
-          <button onclick="simulateScanLL('${pass.id}')" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-disney-midnight font-bold text-xs tap-effect shadow-md flex items-center gap-1 flex-shrink-0">
-            <i class="ph-bold ph-scan"></i> Scan Tap
-          </button>
-        </div>
-      `).join('');
-    }
-
-    function openBookLLModal() {
-      document.getElementById('bookLLModal').classList.remove('hidden');
-    }
-
-    function closeBookLLModal(event, force = false) {
-      if (force || (event && event.target.id === 'bookLLModal')) {
-        document.getElementById('bookLLModal').classList.add('hidden');
-      }
-    }
-
-    function handleConfirmBookLL(e) {
-      e.preventDefault();
-      const raw = document.getElementById('llmpSelectRide').value.split('|');
-      const ride = raw[0];
-      const park = raw[1] || 'DL';
-      const windowStart = document.getElementById('llmpReturnTime').value;
-      const windowEnd = document.getElementById('llmpReturnEndTime').value;
-
-      const newPass = {
-        id: 'll-' + Date.now(),
-        ride,
-        park,
-        windowStart,
-        windowEnd,
-        nextEligible: 'Calculated'
-      };
-
-      simulatedLLMPPasses.push(newPass);
-      saveStorage();
-      renderLLMPDeck();
-      closeBookLLModal(null, true);
-      showToast(`⚡ Booked ${ride}! 2-Hour rule active.`);
-    }
-
-    function simulateScanLL(passId) {
-      const pass = simulatedLLMPPasses.find(p => p.id === passId);
-      if (!pass) return;
-
-      simulatedLLMPPasses = simulatedLLMPPasses.filter(p => p.id !== passId);
-      saveStorage();
-      renderLLMPDeck();
-      showToast(`🎉 Tapped into ${pass.ride}! NEXT PASS UNLOCKED NOW!`);
-    }
-
-    function resetSimulatedLLMP() {
-      simulatedLLMPPasses = [];
-      saveStorage();
-      renderLLMPDeck();
-      showToast('Simulated passes reset');
-    }
-
-    function setSimulatedNow() {
-      showToast('Next LLMP slot is READY TO BOOK right now!');
-    }
-
-    // ================= RESORT MAP (LEAFLET) =================
-    let resortMapInstance = null;
-    let resortMarkers = [];
-
-    const disneyPins = [
-      { id: 'spacemtn', name: 'Space Mountain', category: 'dl', lat: 33.8105, lng: -117.9174, desc: 'Tomorrowland • Rope Drop Walk-on' },
-      { id: 'indy', name: 'Indiana Jones Adventure', category: 'dl', lat: 33.8118, lng: -117.9205, desc: 'Adventureland • LLMP Target #1' },
-      { id: 'bigthunder', name: 'Big Thunder Mountain', category: 'dl', lat: 33.8129, lng: -117.9202, desc: 'Frontierland • Mine Train Coaster' },
-      { id: 'pirates', name: 'Pirates of the Caribbean', category: 'dl', lat: 33.8115, lng: -117.9224, desc: 'New Orleans Square • Standby Essential' },
-      { id: 'matterhorn', name: 'Matterhorn Bobsleds', category: 'dl', lat: 33.8128, lng: -117.9180, desc: 'Fantasyland • Early Standby' },
-      { id: 'rise', name: 'Rise of the Resistance', category: 'dl', lat: 33.8149, lng: -117.9218, desc: 'Galaxy\'s Edge • Trackless Wonder' },
-      { id: 'castle', name: 'Sleeping Beauty Castle', category: 'dl', lat: 33.8121, lng: -117.9190, desc: 'Central Hub • Rope Drop Checkpoint' },
-      { id: 'carsracers', name: 'Radiator Springs Racers', category: 'dca', lat: 33.8052, lng: -117.9171, desc: 'Cars Land • Single Rider Lifesaver' },
-      { id: 'incredicoaster', name: 'Incredicoaster', category: 'dca', lat: 33.8041, lng: -117.9210, desc: 'Pixar Pier • Loop Coaster' },
-      { id: 'soarin', name: 'Soarin\' Around the World', category: 'dca', lat: 33.8079, lng: -117.9218, desc: 'Grizzly Peak • Smooth Hang Glider' },
-      { id: 'webslingers', name: 'WEB SLINGERS', category: 'dca', lat: 33.8073, lng: -117.9184, desc: 'Avengers Campus • Interactive 3D' },
-      { id: 'toystory', name: 'Toy Story Midway Mania', category: 'dca', lat: 33.8048, lng: -117.9218, desc: 'Pixar Pier • 4D Shooter' },
-      { id: 'jollyholiday', name: 'Jolly Holiday Bakery', category: 'food', lat: 33.8114, lng: -117.9192, desc: 'Birria Grilled Cheese & Macarons' },
-      { id: 'pymtest', name: 'Pym Test Kitchen', category: 'food', lat: 33.8071, lng: -117.9181, desc: 'Quantum Pretzels & Sandwiches' },
-      { id: 'cozycone', name: 'Cozy Cone Motel', category: 'food', lat: 33.8058, lng: -117.9175, desc: 'Chili Cones & Churro Bites' },
-      { id: 'bengalbbq', name: 'Bengal Barbecue', category: 'food', lat: 33.8116, lng: -117.9202, desc: 'Adventureland Beef & Bacon Skewers' }
-    ];
-
-    function initResortMap() {
-      if (resortMapInstance) {
-        setTimeout(() => resortMapInstance.invalidateSize(), 200);
-        return;
-      }
-
-      resortMapInstance = L.map('disneyLeafletMap').setView([33.8090, -117.9190], 15);
-
-      L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-        subdomains: ['0', '1', '2', '3'],
-        maxZoom: 20,
-        attribution: '© Google Maps'
-      }).addTo(resortMapInstance);
-
-      renderResortMarkers('all');
-    }
-
-    function renderResortMarkers(category = 'all') {
-      resortMarkers.forEach(m => resortMapInstance.removeLayer(m));
-      resortMarkers = [];
-
-      disneyPins.forEach(pin => {
-        if (category !== 'all' && pin.category !== category) return;
-
-        let pinColor = '#fbbf24';
-        if (pin.category === 'dca') pinColor = '#06b6d4';
-        if (pin.category === 'food') pinColor = '#f43f5e';
-
-        const customIcon = L.divIcon({
-          className: 'disney-map-pin',
-          html: `<div style="background-color: ${pinColor}; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #000;">★</div>`,
-          iconSize: [26, 26],
-          iconAnchor: [13, 13]
-        });
-
-        const marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).addTo(resortMapInstance);
-        marker.bindPopup(`
-          <div style="min-width: 170px; color: #fff;">
-            <strong style="color: ${pinColor}; font-size: 12px;">${pin.name}</strong>
-            <p style="font-size: 11px; margin-top: 3px; color: #cbd5e1;">${pin.desc}</p>
-            <a href="https://www.google.com/maps/dir/?api=1&destination=${pin.lat},${pin.lng}" target="_blank" style="display: inline-block; margin-top: 6px; font-size: 10px; background: #fbbf24; color: #000; padding: 3px 8px; border-radius: 6px; font-weight: bold; text-decoration: none;">Navigate ➔</a>
-          </div>
-        `);
-        marker.pinId = pin.id;
-        resortMarkers.push(marker);
-      });
-    }
-
-    function filterMapCategory(cat) {
-      document.querySelectorAll('.map-chip').forEach(c => {
-        c.classList.remove('bg-amber-400', 'text-disney-midnight');
-        c.classList.add('bg-disney-card', 'text-slate-300');
-      });
-      const activeChip = document.getElementById('map-chip-' + cat);
-      if (activeChip) {
-        activeChip.classList.remove('bg-disney-card', 'text-slate-300');
-        activeChip.classList.add('bg-amber-400', 'text-disney-midnight');
-      }
-      renderResortMarkers(cat);
-    }
-
-    function resetResortMap() {
-      if (resortMapInstance) {
-        resortMapInstance.setView([33.8090, -117.9190], 15);
-      }
-    }
-
-    function flyToMapStop(stopId) {
-      switchTab('map');
-      setTimeout(() => {
-        const pin = disneyPins.find(p => p.id === stopId);
-        if (pin && resortMapInstance) {
-          resortMapInstance.flyTo([pin.lat, pin.lng], 17, { duration: 1 });
-          const m = resortMarkers.find(x => x.pinId === stopId);
-          if (m) setTimeout(() => m.openPopup(), 950);
-        }
-      }, 200);
-    }
-
-    function openLightboxManual(imgSrc, title, time) {
-      const modal = document.getElementById('photoLightboxModal');
-      const img = document.getElementById('lightboxImage');
-      const t = document.getElementById('lightboxTitle');
-      const tm = document.getElementById('lightboxTime');
-      const bars = document.getElementById('storyProgressBars');
-      const counter = document.getElementById('lightboxStoryCounter');
-
-      if (bars) bars.innerHTML = '';
-      if (counter) counter.textContent = '1 of 1';
-      t.textContent = title;
-      tm.textContent = time;
-      img.src = imgSrc;
-
-      modal.classList.remove('hidden');
-    }
-
-    function closeLightbox(event, force = false) {
-      if (force || (event && event.target.id === 'photoLightboxModal')) {
-        document.getElementById('photoLightboxModal').classList.add('hidden');
-        activeStoryRideId = null;
-      }
-    }
-
-    function clearAllAlbumPhotos() {
-      if (confirm('Clear all photos from the album?')) {
-        checkinData = {};
-        saveStorage();
-        renderTimeline();
-        renderAllRidesView();
-        renderAlbumView();
-        showToast('Album cleared');
-      }
-    }
-
-    // ================= COMPLETE RIDES DIRECTORY (DISNEYLAND & DCA) =================
-    // Comprehensive ride database categorized by park, land, and LLMP availability.
-    // Note: Guardians is explicitly marked with skip: true per user instruction.
+    // ================= ALL DISNEYLAND & DCA RIDES CATALOG =================
     const allDisneyRides = [
-      // 🏰 DISNEYLAND PARK (30 Rides)
-      // Tomorrowland
-      { id: 'r-spacemtn', name: 'Space Mountain', park: 'dl', land: 'Tomorrowland', llmp: true, singleRider: true, intensity: 'High (Thrill Coaster)', skip: false },
-      { id: 'r-star-tours', name: 'Star Tours - The Adventures Continue', park: 'dl', land: 'Tomorrowland', llmp: true, singleRider: false, intensity: 'Moderate (Motion Simulator)', skip: false },
-      { id: 'r-buzz', name: 'Buzz Lightyear Astro Blasters', park: 'dl', land: 'Tomorrowland', llmp: true, singleRider: false, intensity: 'Low (Laser Blaster Dark Ride)', skip: false },
-      { id: 'r-astro-orbiter', name: 'Astro Orbitor', park: 'dl', land: 'Tomorrowland', llmp: false, singleRider: false, intensity: 'Low (Aerial Spinner)', skip: false },
-      { id: 'r-autopia', name: 'Autopia', park: 'dl', land: 'Tomorrowland', llmp: true, singleRider: false, intensity: 'Low (Scenic Highway)', skip: false },
-      { id: 'r-nemo', name: 'Finding Nemo Submarine Voyage', park: 'dl', land: 'Tomorrowland', llmp: false, singleRider: false, intensity: 'Low (Submarine Lagoon)', skip: false },
+      // Disneyland - Tomorrowland
+      { id: 'dl-space-mtn', name: 'Space Mountain', park: 'dl', land: 'Tomorrowland', llmp: true, singleRider: false, isSkipped: false, thrill: 'Roller Coaster' },
+      { id: 'dl-star-tours', name: 'Star Tours – The Adventures Continue', park: 'dl', land: 'Tomorrowland', llmp: true, singleRider: false, isSkipped: false, thrill: '3D Flight Simulator' },
+      { id: 'dl-buzz-astro', name: 'Buzz Lightyear Astro Blasters', park: 'dl', land: 'Tomorrowland', llmp: true, singleRider: false, isSkipped: false, thrill: 'Interactive Shooter' },
+      { id: 'dl-astro-orbiter', name: 'Astro Orbitor', park: 'dl', land: 'Tomorrowland', llmp: false, singleRider: false, isSkipped: false, thrill: 'Spinner' },
+      { id: 'dl-autopia', name: 'Autopia', park: 'dl', land: 'Tomorrowland', llmp: true, singleRider: false, isSkipped: false, thrill: 'Scenic Drive' },
+      { id: 'dl-submarines', name: 'Finding Nemo Submarine Voyage', park: 'dl', land: 'Tomorrowland', llmp: false, singleRider: false, isSkipped: false, thrill: 'Submarine Tour' },
 
-      // Adventureland
-      { id: 'r-indy', name: 'Indiana Jones Adventure', park: 'dl', land: 'Adventureland', llmp: true, singleRider: true, intensity: 'High (Rough Motion Thrill)', skip: false },
-      { id: 'r-jungle-cruise', name: 'Jungle Cruise', park: 'dl', land: 'Adventureland', llmp: false, singleRider: false, intensity: 'Low (Classic Boat Tour)', skip: false },
+      // Disneyland - Adventureland
+      { id: 'dl-indy', name: 'Indiana Jones Adventure', park: 'dl', land: 'Adventureland', llmp: true, singleRider: true, isSkipped: false, thrill: 'Rough Motion Vehicle' },
+      { id: 'dl-jungle-cruise', name: 'Jungle Cruise', park: 'dl', land: 'Adventureland', llmp: false, singleRider: false, isSkipped: false, thrill: 'Scenic River Boat' },
 
-      // New Orleans Square & Critter Country
-      { id: 'r-pirates', name: 'Pirates of the Caribbean', park: 'dl', land: 'New Orleans Square', llmp: false, singleRider: false, intensity: 'Low (Classic Boat Ride - 2 Minor Drops)', skip: false },
-      { id: 'r-haunted-mansion', name: 'Haunted Mansion', park: 'dl', land: 'New Orleans Square', llmp: true, singleRider: false, intensity: 'Low (Doom Buggy Dark Ride)', skip: false },
-      { id: 'r-tiana', name: 'Tiana\'s Bayou Adventure', park: 'dl', land: 'Critter Country', llmp: true, singleRider: true, intensity: 'Moderate (Flume Ride with 50ft Drop)', skip: false },
-      { id: 'r-pooh', name: 'The Many Adventures of Winnie the Pooh', park: 'dl', land: 'Critter Country', llmp: false, singleRider: false, intensity: 'Low (Gentle Dark Ride)', skip: false },
+      // Disneyland - New Orleans Square & Bayou
+      { id: 'dl-pirates', name: 'Pirates of the Caribbean', park: 'dl', land: 'New Orleans Square', llmp: false, singleRider: false, isSkipped: false, thrill: 'Classic Dark Boat' },
+      { id: 'dl-haunted-mansion', name: 'Haunted Mansion', park: 'dl', land: 'New Orleans Square', llmp: true, singleRider: false, isSkipped: false, thrill: 'Doom Buggy Dark Ride' },
 
-      // Frontierland
-      { id: 'r-big-thunder', name: 'Big Thunder Mountain Railroad', park: 'dl', land: 'Frontierland', llmp: true, singleRider: false, intensity: 'Moderate (Mine Train Coaster)', skip: false },
+      // Disneyland - Frontierland
+      { id: 'dl-big-thunder', name: 'Big Thunder Mountain Railroad', park: 'dl', land: 'Frontierland', llmp: true, singleRider: false, isSkipped: false, thrill: 'Runaway Mine Train' },
 
-      // Fantasyland
-      { id: 'r-matterhorn', name: 'Matterhorn Bobsleds', park: 'dl', land: 'Fantasyland', llmp: true, singleRider: true, intensity: 'Moderate (Dual-Track Coaster)', skip: false },
-      { id: 'r-peter-pan', name: 'Peter Pan\'s Flight', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Suspended Dark Ride)', skip: false },
-      { id: 'r-mr-toad', name: 'Mr. Toad\'s Wild Ride', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Classic Dark Ride)', skip: false },
-      { id: 'r-snow-white', name: 'Snow White\'s Enchanted Wish', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Classic Dark Ride)', skip: false },
-      { id: 'r-pinocchio', name: 'Pinocchio\'s Daring Journey', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Classic Dark Ride)', skip: false },
-      { id: 'r-dumbo', name: 'Dumbo the Flying Elephant', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Classic Spinner)', skip: false },
-      { id: 'r-alice', name: 'Alice in Wonderland', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Two-Level Dark Ride)', skip: false },
-      { id: 'r-mad-tea-party', name: 'Mad Tea Party', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low to High (Spinning Teacups)', skip: false },
-      { id: 'r-casey-jr', name: 'Casey Jr. Circus Train', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Scenic Mini Train)', skip: false },
-      { id: 'r-storybook', name: 'Storybook Land Canal Boats', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Miniature Village Boat Tour)', skip: false },
-      { id: 'r-small-world', name: '"it\'s a small world"', park: 'dl', land: 'Fantasyland', llmp: true, singleRider: false, intensity: 'Low (Musical Boat Ride)', skip: false },
-      { id: 'r-carrousel', name: 'King Arthur Carrousel', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Classic Carousel)', skip: false },
+      // Disneyland - Fantasyland & Matterhorn
+      { id: 'dl-matterhorn', name: 'Matterhorn Bobsleds', park: 'dl', land: 'Fantasyland', llmp: true, singleRider: true, isSkipped: false, thrill: 'Bobsled Coaster' },
+      { id: 'dl-peter-pan', name: 'Peter Pan\'s Flight', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, isSkipped: false, thrill: 'Suspended Dark Ride' },
+      { id: 'dl-mr-toad', name: 'Mr. Toad\'s Wild Ride', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, isSkipped: false, thrill: 'Dark Car Ride' },
+      { id: 'dl-alice', name: 'Alice in Wonderland', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, isSkipped: false, thrill: 'Track Dark Ride' },
+      { id: 'dl-snow-white', name: 'Snow White\'s Enchanted Wish', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, isSkipped: false, thrill: 'Dark Fantasy Ride' },
+      { id: 'dl-pinocchio', name: 'Pinocchio\'s Daring Journey', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, isSkipped: false, thrill: 'Dark Ride' },
+      { id: 'dl-dumbo', name: 'Dumbo the Flying Elephant', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, isSkipped: false, thrill: 'Aerial Spinner' },
+      { id: 'dl-carousel', name: 'King Arthur Carrousel', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, isSkipped: false, thrill: 'Gentle Carousel' },
+      { id: 'dl-mad-tea', name: 'Mad Tea Party', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, isSkipped: false, thrill: 'Spinning Teacups' },
+      { id: 'dl-casey-jr', name: 'Casey Jr. Circus Train', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, isSkipped: false, thrill: 'Scenic Mini Train' },
+      { id: 'dl-storybook', name: 'Storybook Land Canal Boats', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, isSkipped: false, thrill: 'Gentle Canal Cruise' },
+      { id: 'dl-small-world', name: '\"it\'s a small world\"', park: 'dl', land: 'Fantasyland', llmp: true, singleRider: false, isSkipped: false, thrill: 'Musical Boat Ride' },
 
-      // Star Wars: Galaxy's Edge
-      { id: 'r-rise', name: 'Star Wars: Rise of the Resistance', park: 'dl', land: 'Star Wars: Galaxy\'s Edge', llmp: false, singleRider: false, intensity: 'Moderate (Trackless Dark Ride + Small Drop)', singlePass: true, skip: false },
-      { id: 'r-smugglers', name: 'Millennium Falcon: Smugglers Run', park: 'dl', land: 'Star Wars: Galaxy\'s Edge', llmp: true, singleRider: true, intensity: 'Moderate (Interactive Flight Simulator)', skip: false },
+      // Disneyland - Star Wars: Galaxy's Edge
+      { id: 'dl-rise-resistance', name: 'Star Wars: Rise of the Resistance', park: 'dl', land: 'Star Wars: Galaxy\'s Edge', llmp: false, singlePass: true, singleRider: false, isSkipped: false, thrill: 'Trackless Mega-Dark Ride' },
+      { id: 'dl-smugglers-run', name: 'Millennium Falcon: Smugglers Run', park: 'dl', land: 'Star Wars: Galaxy\'s Edge', llmp: true, singleRider: true, isSkipped: false, thrill: 'Interactive Flight Cockpit' },
 
-      // Mickey's Toontown
-      { id: 'r-runaway-railway', name: 'Mickey & Minnie\'s Runaway Railway', park: 'dl', land: 'Mickey\'s Toontown', llmp: true, singleRider: false, intensity: 'Low (Trackless 2.5D Cartoon Adventure)', skip: false },
-      { id: 'r-roger-rabbit', name: 'Roger Rabbit\'s Car Toon Spin', park: 'dl', land: 'Mickey\'s Toontown', llmp: false, singleRider: false, intensity: 'Low (Spinning Dark Ride)', skip: false },
-      { id: 'r-chip-dale', name: 'Chip \'n\' Dale\'s GADGETcoaster', park: 'dl', land: 'Mickey\'s Toontown', llmp: false, singleRider: false, intensity: 'Low (Junior Roller Coaster)', skip: false },
+      // Disneyland - Mickey's Toontown
+      { id: 'dl-runaway-railway', name: 'Mickey & Minnie\'s Runaway Railway', park: 'dl', land: 'Mickey\'s Toontown', llmp: true, singleRider: false, isSkipped: false, thrill: 'Trackless 2.5D Ride' },
+      { id: 'dl-roger-rabbit', name: 'Roger Rabbit\'s Car Toon Spin', park: 'dl', land: 'Mickey\'s Toontown', llmp: true, singleRider: false, isSkipped: false, thrill: 'Spinning Taxi Cab' },
+      { id: 'dl-chip-dale-coaster', name: 'Chip \'n\' Dale\'s GADGETcoaster', park: 'dl', land: 'Mickey\'s Toontown', llmp: false, singleRider: false, isSkipped: false, thrill: 'Family Mini Coaster' },
 
-      // 🎡 DISNEY CALIFORNIA ADVENTURE (DCA - 18 Rides)
-      // Avengers Campus
-      { id: 'r-guardians', name: 'Guardians of the Galaxy: Mission BREAKOUT!', park: 'dca', land: 'Avengers Campus', llmp: true, singleRider: false, intensity: 'Extreme (6 Heavy Accelerated Free-Fall Drops)', skip: true, skipReason: 'User opted out due to drop intensity' },
-      { id: 'r-webslingers', name: 'WEB SLINGERS: A Spider-Man Adventure', park: 'dca', land: 'Avengers Campus', llmp: true, singleRider: true, intensity: 'Low (Interactive 3D Web-Shooting)', skip: false },
+      // Disneyland - Bayou Country
+      { id: 'dl-tianas-bayou', name: 'Tiana\'s Bayou Adventure', park: 'dl', land: 'Critter Country', llmp: true, singleRider: true, isSkipped: false, thrill: 'Log Flume & Drop' },
+      { id: 'dl-pooh', name: 'The Many Adventures of Winnie the Pooh', park: 'dl', land: 'Critter Country', llmp: false, singleRider: false, isSkipped: false, thrill: 'Honey Pot Dark Ride' },
 
-      // Cars Land
-      { id: 'r-radiator-racers', name: 'Radiator Springs Racers', park: 'dca', land: 'Cars Land', llmp: false, singleRider: true, intensity: 'Moderate (High-Speed Outdoor Duel)', singlePass: true, skip: false },
-      { id: 'r-luigi', name: 'Luigi\'s Rollickin\' Roadsters', park: 'dca', land: 'Cars Land', llmp: false, singleRider: false, intensity: 'Low (Trackless Dancing Cars)', skip: false },
-      { id: 'r-mater', name: 'Mater\'s Junkyard Jamboree', park: 'dca', land: 'Cars Land', llmp: false, singleRider: false, intensity: 'Low (Whip-Spinning Tractor Square Dance)', skip: false },
+      // DCA - Avengers Campus
+      { id: 'dca-guardians', name: 'Guardians of the Galaxy – Mission: BREAKOUT!', park: 'dca', land: 'Avengers Campus', llmp: true, singleRider: false, isSkipped: true, thrill: 'Intense Free-Fall Drop Tower (SKIPPED)' },
+      { id: 'dca-webslingers', name: 'WEB SLINGERS: A Spider-Man Adventure', park: 'dca', land: 'Avengers Campus', llmp: true, singleRider: true, isSkipped: false, thrill: 'Interactive Web Shooter' },
 
-      // Pixar Pier
-      { id: 'r-incredicoaster', name: 'Incredicoaster', park: 'dca', land: 'Pixar Pier', llmp: true, singleRider: true, intensity: 'High (Launch Coaster with 1 Inversion Loop)', skip: false },
-      { id: 'r-toy-story', name: 'Toy Story Midway Mania!', park: 'dca', land: 'Pixar Pier', llmp: true, singleRider: false, intensity: 'Low (4D Carnival Shooter)', skip: false },
-      { id: 'r-pixar-pal', name: 'Pixar Pal-A-Round (Non-Swinging)', park: 'dca', land: 'Pixar Pier', llmp: false, singleRider: false, intensity: 'Low (Panoramic Ferris Wheel)', skip: false },
-      { id: 'r-pixar-pal-swinging', name: 'Pixar Pal-A-Round (Swinging)', park: 'dca', land: 'Pixar Pier', llmp: false, singleRider: false, intensity: 'Moderate to High (Swinging Gondolas)', skip: false },
-      { id: 'r-inside-out', name: 'Inside Out Emotional Whirlwind', park: 'dca', land: 'Pixar Pier', llmp: false, singleRider: false, intensity: 'Low (Family Balloon Spinner)', skip: false },
-      { id: 'r-jessie', name: 'Jessie\'s Critter Carousel', park: 'dca', land: 'Pixar Pier', llmp: false, singleRider: false, intensity: 'Low (Woody\'s Roundup Carousel)', skip: false },
+      // DCA - Cars Land
+      { id: 'dca-radiator-springs', name: 'Radiator Springs Racers', park: 'dca', land: 'Cars Land', llmp: false, singlePass: true, singleRider: true, isSkipped: false, thrill: 'High-Speed Slot Racer' },
+      { id: 'dca-mater-junkyard', name: 'Mater\'s Junkyard Jamboree', park: 'dca', land: 'Cars Land', llmp: false, singleRider: false, isSkipped: false, thrill: 'Whipping Tractor Dance' },
+      { id: 'dca-luigi-roadsters', name: 'Luigi\'s Rollickin\' Roadsters', park: 'dca', land: 'Cars Land', llmp: false, singleRider: false, isSkipped: false, thrill: 'Trackless Dancing Cars' },
 
-      // Grizzly Peak
-      { id: 'r-soarin', name: 'Soarin\' Around the World', park: 'dca', land: 'Grizzly Peak', llmp: true, singleRider: true, intensity: 'Low (Gentle IMAX Hang-Gliding Flight)', skip: false },
-      { id: 'r-grizzly-river', name: 'Grizzly River Run', park: 'dca', land: 'Grizzly Peak', llmp: true, singleRider: true, intensity: 'Moderate (White-Water Raft River Rapids)', skip: false },
+      // DCA - Pixar Pier
+      { id: 'dca-incredicoaster', name: 'Incredicoaster', park: 'dca', land: 'Pixar Pier', llmp: true, singleRider: true, isSkipped: false, thrill: 'Launch Coaster & Loop' },
+      { id: 'dca-toy-story', name: 'Toy Story Midway Mania!', park: 'dca', land: 'Pixar Pier', llmp: true, singleRider: false, isSkipped: false, thrill: '4D Carnival Midway' },
+      { id: 'dca-pixar-pal', name: 'Pixar Pal-A-Round (Non-Swinging)', park: 'dca', land: 'Pixar Pier', llmp: false, singleRider: false, isSkipped: false, thrill: 'Scenic Ferris Wheel' },
+      { id: 'dca-inside-out', name: 'Inside Out Emotional Whirlwind', park: 'dca', land: 'Pixar Pier', llmp: false, singleRider: false, isSkipped: false, thrill: 'Family Spinner' },
+      { id: 'dca-jessie-carousel', name: 'Jessie\'s Critter Carousel', park: 'dca', land: 'Pixar Pier', llmp: false, singleRider: false, isSkipped: false, thrill: 'Gentle Carousel' },
 
-      // Hollywood Land
-      { id: 'r-monsters-inc', name: 'Monsters, Inc. Mike & Sulley to the Rescue!', park: 'dca', land: 'Hollywood Land', llmp: true, singleRider: false, intensity: 'Low (Taxi Cab Dark Ride)', skip: false },
+      // DCA - Grizzly Peak
+      { id: 'dca-soarin', name: 'Soarin\' Around the World', park: 'dca', land: 'Grizzly Peak', llmp: true, singleRider: true, isSkipped: false, thrill: 'Gentle Hang Glider Theater' },
+      { id: 'dca-grizzly-river', name: 'Grizzly River Run', park: 'dca', land: 'Grizzly Peak', llmp: true, singleRider: true, isSkipped: false, thrill: 'Spinning Whitewater Raft' },
 
-      // Paradise Gardens Park
-      { id: 'r-little-mermaid', name: 'The Little Mermaid ~ Ariel\'s Undersea Adventure', park: 'dca', land: 'Paradise Gardens Park', llmp: false, singleRider: false, intensity: 'Low (Omnimover Clamshell Ride)', skip: false },
-      { id: 'r-goofy-sky-school', name: 'Goofy\'s Sky School', park: 'dca', land: 'Paradise Gardens Park', llmp: true, singleRider: true, intensity: 'Moderate (Wild Mouse Coaster)', skip: false },
-      { id: 'r-silly-symphony', name: 'Silly Symphony Swings', park: 'dca', land: 'Paradise Gardens Park', llmp: false, singleRider: false, intensity: 'Low (Wave Swinger Over Water)', skip: false },
-      { id: 'r-golden-zephyr', name: 'Golden Zephyr', park: 'dca', land: 'Paradise Gardens Park', llmp: false, singleRider: false, intensity: 'Low (Retro Flying Rocket Carousel)', skip: false },
-      { id: 'r-jumpin-jellyfish', name: 'Jumpin\' Jellyfish', park: 'dca', land: 'Paradise Gardens Park', llmp: false, singleRider: false, intensity: 'Low (Gentle Parachute Jump)', skip: false }
+      // DCA - Hollywood Land
+      { id: 'dca-monsters-inc', name: 'Monsters, Inc. Mike & Sulley to the Rescue!', park: 'dca', land: 'Hollywood Land', llmp: true, singleRider: false, isSkipped: false, thrill: 'Dark Taxi Tour' },
+
+      // DCA - Paradise Gardens Park
+      { id: 'dca-little-mermaid', name: 'The Little Mermaid ~ Ariel\'s Undersea Adventure', park: 'dca', land: 'Paradise Gardens Park', llmp: false, singleRider: false, isSkipped: false, thrill: 'Clamshell Omnimover' },
+      { id: 'dca-goofy-sky', name: 'Goofy\'s Sky School', park: 'dca', land: 'Paradise Gardens Park', llmp: true, singleRider: true, isSkipped: false, thrill: 'Wild Mouse Coaster' },
+      { id: 'dca-silly-symphony', name: 'Silly Symphony Swings', park: 'dca', land: 'Paradise Gardens Park', llmp: false, singleRider: false, isSkipped: false, thrill: 'Wave Swinger' },
+      { id: 'dca-jumpin-jellyfish', name: 'Jumpin\' Jellyfish', park: 'dca', land: 'Paradise Gardens Park', llmp: false, singleRider: false, isSkipped: false, thrill: 'Gentle Parachute Rise' },
+      { id: 'dca-golden-zephyr', name: 'Golden Zephyr', park: 'dca', land: 'Paradise Gardens Park', llmp: false, singleRider: false, isSkipped: false, thrill: 'Retro Rocket Spinner' }
     ];
 
-    // State: Ridden ride IDs -> Set
     let riddenRidesSet = new Set();
-    let currentRideParkFilter = 'all'; // 'all', 'dl', 'dca', 'ridden'
-    let currentRideSearchQuery = '';
-    let currentRideLandFilter = 'all';
+    let currentRidesParkFilter = 'all';
+    let currentRidesSearchQuery = '';
+    let currentRidesLandFilter = 'all';
 
-    // Lightbox story multi-photo viewer state
-    let activeStoryRideId = null;
-    let activeStoryPhotoIdx = 0;
-
-    // Load ridden rides from localStorage
+    // Ridden state persistence
     function loadRidesStorage() {
       try {
-        const storedRidden = localStorage.getItem('disney_ridden_rides_v1');
-        if (storedRidden) {
-          riddenRidesSet = new Set(JSON.parse(storedRidden));
-        }
+        const stored = localStorage.getItem('disney_ridden_rides_v1');
+        riddenRidesSet = stored ? new Set(JSON.parse(stored)) : new Set();
       } catch (e) {
-        console.warn("Could not read ridden rides:", e);
+        console.warn("Could not read ridden storage:", e);
         riddenRidesSet = new Set();
       }
     }
@@ -1951,288 +1452,226 @@
       try {
         localStorage.setItem('disney_ridden_rides_v1', JSON.stringify(Array.from(riddenRidesSet)));
       } catch (e) {
-        console.warn("Storage full:", e);
+        console.warn("Could not save ridden storage:", e);
       }
-      updateRidesHeaderStats();
+      updateRidesHeaderAndStats();
     }
 
-    // Toggle ridden status
+    // Toggle ride ridden state
     function toggleRideRidden(rideId, event) {
       if (event) event.stopPropagation();
-      const ride = allDisneyRides.find(r => r.id === rideId);
-      if (!ride) return;
-
       if (riddenRidesSet.has(rideId)) {
         riddenRidesSet.delete(rideId);
-        showToast(`Unchecked ${ride.name}`);
+        showToast('Ride unchecked');
       } else {
         riddenRidesSet.add(rideId);
-        showToast(`🎉 Conquered ${ride.name}!`);
+        const ride = allDisneyRides.find(r => r.id === rideId);
+        showToast(`🎉 Conquered ${ride ? ride.name : 'Ride'}!`);
       }
-
       saveRidesStorage();
       renderAllRidesView();
+      if (window.syncRiddenRidesToFirebase) {
+        window.syncRiddenRidesToFirebase();
+      }
     }
 
-    // Filter handlers
-    function filterRidesPark(filterType) {
-      currentRideParkFilter = filterType;
-      document.querySelectorAll('.ride-park-pill').forEach(btn => {
-        btn.classList.remove('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
-        btn.classList.add('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
-      });
+    function updateRidesHeaderAndStats() {
+      const totalRidden = riddenRidesSet.size;
+      const totalRides = allDisneyRides.length;
+      const pct = Math.round((totalRidden / totalRides) * 100);
 
-      const activeBtn = document.getElementById('ride-filter-' + filterType);
-      if (activeBtn) {
-        activeBtn.classList.remove('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
-        activeBtn.classList.add('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+      const headerRideCount = document.getElementById('headerRideCount');
+      if (headerRideCount) headerRideCount.textContent = `${totalRidden} / ${totalRides} Rides`;
+
+      const ridesProgressStat = document.getElementById('ridesProgressStat');
+      if (ridesProgressStat) ridesProgressStat.textContent = `${totalRidden} / ${totalRides}`;
+
+      const ridesPctStat = document.getElementById('ridesPctStat');
+      if (ridesPctStat) ridesPctStat.textContent = `${pct}% Completed`;
+
+      const allRidesProgressBar = document.getElementById('allRidesProgressBar');
+      if (allRidesProgressBar) allRidesProgressBar.style.width = `${pct}%`;
+
+      const dlRidden = allDisneyRides.filter(r => r.park === 'dl' && riddenRidesSet.has(r.id)).length;
+      const dcaRidden = allDisneyRides.filter(r => r.park === 'dca' && riddenRidesSet.has(r.id)).length;
+
+      const dlRidesStat = document.getElementById('dlRidesStat');
+      if (dlRidesStat) dlRidesStat.textContent = `${dlRidden} / 30`;
+
+      const dcaRidesStat = document.getElementById('dcaRidesStat');
+      if (dcaRidesStat) dcaRidesStat.textContent = `${dcaRidden} / 18`;
+
+      const ridesBadge = document.getElementById('ridesBadge');
+      if (ridesBadge) {
+        if (totalRidden > 0) ridesBadge.classList.remove('hidden');
+        else ridesBadge.classList.add('hidden');
       }
+    }
 
+    // Filter Handlers
+    function filterRidesPark(filterType) {
+      currentRidesParkFilter = filterType;
+      document.querySelectorAll('.ride-park-pill').forEach(pill => {
+        pill.classList.remove('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+        pill.classList.add('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+      });
+      const activePill = document.getElementById('ride-filter-' + filterType);
+      if (activePill) {
+        activePill.classList.remove('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+        activePill.classList.add('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+      }
       renderAllRidesView();
     }
 
     function handleRideSearch(query) {
-      currentRideSearchQuery = (query || '').toLowerCase().trim();
+      currentRidesSearchQuery = (query || '').toLowerCase().trim();
       renderAllRidesView();
     }
 
-    function handleRideLandFilter(land) {
-      currentRideLandFilter = land;
+    function handleRideLandFilter(landValue) {
+      currentRidesLandFilter = landValue;
       renderAllRidesView();
     }
 
-    // Header counter updater
-    function updateRidesHeaderStats() {
-      const activeRides = allDisneyRides.filter(r => !r.skip);
-      const totalEligible = activeRides.length; // 48 total (Guardians excluded)
-      const completedTotal = Array.from(riddenRidesSet).filter(id => {
-        const r = allDisneyRides.find(x => x.id === id);
-        return r && !r.skip;
-      }).length;
-
-      const headerCount = document.getElementById('headerRideCount');
-      if (headerCount) headerCount.textContent = `${completedTotal} / ${totalEligible} Rides`;
-
-      const dlRides = activeRides.filter(r => r.park === 'dl');
-      const dcaRides = activeRides.filter(r => r.park === 'dca');
-
-      const dlDone = dlRides.filter(r => riddenRidesSet.has(r.id)).length;
-      const dcaDone = dcaRides.filter(r => riddenRidesSet.has(r.id)).length;
-
-      const progressStat = document.getElementById('ridesProgressStat');
-      const pctStat = document.getElementById('ridesPctStat');
-      const bar = document.getElementById('allRidesProgressBar');
-      const dlStat = document.getElementById('dlRidesStat');
-      const dcaStat = document.getElementById('dcaRidesStat');
-      const badge = document.getElementById('ridesBadge');
-
-      const pct = Math.round((completedTotal / (totalEligible || 1)) * 100);
-
-      if (progressStat) progressStat.textContent = `${completedTotal} / ${totalEligible}`;
-      if (pctStat) pctStat.textContent = `${pct}% Conquered`;
-      if (bar) bar.style.width = `${pct}%`;
-      if (dlStat) dlStat.textContent = `${dlDone} / ${dlRides.length}`;
-      if (dcaStat) dcaStat.textContent = `${dcaDone} / ${dcaRides.length}`;
-
-      if (badge) {
-        if (completedTotal > 0) badge.classList.remove('hidden');
-        else badge.classList.add('hidden');
-      }
-    }
-
-    // Render Master Rides Directory with Instagram Story Check-Ins
+    // Render Master Rides Tab View
     function renderAllRidesView() {
       const container = document.getElementById('allRidesListContainer');
       if (!container) return;
 
-      updateRidesHeaderStats();
+      updateRidesHeaderAndStats();
 
-      // Apply filters
       let filtered = allDisneyRides.filter(ride => {
-        // Park filter
-        if (currentRideParkFilter === 'dl' && ride.park !== 'dl') return false;
-        if (currentRideParkFilter === 'dca' && ride.park !== 'dca') return false;
-        if (currentRideParkFilter === 'ridden' && !riddenRidesSet.has(ride.id)) return false;
-
-        // Land filter
-        if (currentRideLandFilter !== 'all' && ride.land !== currentRideLandFilter) return false;
-
-        // Search query
-        if (currentRideSearchQuery) {
-          const matchName = ride.name.toLowerCase().includes(currentRideSearchQuery);
-          const matchLand = ride.land.toLowerCase().includes(currentRideSearchQuery);
-          if (!matchName && !matchLand) return false;
+        if (currentRidesParkFilter === 'dl' && ride.park !== 'dl') return false;
+        if (currentRidesParkFilter === 'dca' && ride.park !== 'dca') return false;
+        if (currentRidesParkFilter === 'ridden' && !riddenRidesSet.has(ride.id)) return false;
+        if (currentRidesLandFilter !== 'all' && ride.land !== currentRidesLandFilter) return false;
+        if (currentRidesSearchQuery) {
+          const matchName = ride.name.toLowerCase().includes(currentRidesSearchQuery);
+          const matchLand = ride.land.toLowerCase().includes(currentRidesSearchQuery);
+          const matchThrill = ride.thrill.toLowerCase().includes(currentRidesSearchQuery);
+          if (!matchName && !matchLand && !matchThrill) return false;
         }
-
         return true;
       });
 
       if (filtered.length === 0) {
         container.innerHTML = `
           <div class="glass-card rounded-2xl p-8 text-center space-y-2">
-            <div class="w-10 h-10 rounded-xl bg-cyan-400/10 text-cyan-400 flex items-center justify-center mx-auto text-xl">
-              <i class="ph-bold ph-ticket"></i>
-            </div>
-            <h4 class="text-sm font-bold text-white">No rides matching your search</h4>
-            <p class="text-xs text-slate-400">Try switching filters or clearing the search box.</p>
+            <h4 class="text-sm font-bold text-white">No rides match your filter</h4>
+            <p class="text-xs text-slate-400">Try clearing your search query or selecting "All Lands".</p>
           </div>
         `;
         return;
       }
 
-      // Group rides by Land
-      const landGroups = {};
+      // Group by Land
+      const landsMap = {};
       filtered.forEach(ride => {
-        if (!landGroups[ride.land]) landGroups[ride.land] = [];
-        landGroups[ride.land].push(ride);
+        if (!landsMap[ride.land]) landsMap[ride.land] = [];
+        landsMap[ride.land].push(ride);
       });
 
-      container.innerHTML = Object.entries(landGroups).map(([landName, ridesInLand]) => {
-        const parkBadge = ridesInLand[0].park === 'dl' ? '🏰 Disneyland' : '🎡 DCA';
-        const parkBadgeColor = ridesInLand[0].park === 'dl' ? 'text-amber-300 border-amber-400/30 bg-amber-500/10' : 'text-cyan-300 border-cyan-400/30 bg-cyan-500/10';
+      container.innerHTML = Object.entries(landsMap).map(([landName, ridesList]) => {
+        const parkBadge = ridesList[0].park === 'dl' 
+          ? `<span class="text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/25">Disneyland</span>`
+          : `<span class="text-[10px] font-bold text-cyan-400 bg-cyan-400/10 px-2 py-0.5 rounded-full border border-cyan-400/25">DCA</span>`;
 
-        const ridesHtml = ridesInLand.map(ride => {
-          const isDone = riddenRidesSet.has(ride.id);
+        const ridesHtml = ridesList.map(ride => {
+          const isRidden = riddenRidesSet.has(ride.id);
           const checkin = checkinData[ride.id];
           const photos = (checkin && Array.isArray(checkin.photos)) ? checkin.photos : [];
 
-          // Badges for LLMP / Single Rider
-          let badgesHtml = '';
-          if (ride.llmp) {
-            badgesHtml += `<span class="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[9px] font-mono font-semibold border border-purple-500/30 flex items-center gap-0.5"><i class="ph-bold ph-lightning"></i> LLMP</span>`;
-          }
-          if (ride.singlePass) {
-            badgesHtml += `<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-mono font-semibold border border-amber-500/30">$ Single Pass</span>`;
-          }
-          if (ride.singleRider) {
-            badgesHtml += `<span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-mono font-semibold border border-emerald-500/30">Single Rider</span>`;
-          }
-
-          // Special card for Guardians (Skipped)
-          if (ride.skip) {
+          // Guardians skipped styling
+          if (ride.isSkipped) {
             return `
-              <div class="glass-card rounded-2xl p-3 border-rose-500/25 bg-rose-950/20 opacity-75 space-y-1.5">
-                <div class="flex items-start justify-between gap-2">
+              <div class="p-3 rounded-2xl bg-rose-950/20 border border-rose-500/30 opacity-75 space-y-2">
+                <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
-                    <span class="w-6 h-6 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs">
-                      <i class="ph-bold ph-prohibit"></i>
-                    </span>
+                    <span class="w-6 h-6 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold">✕</span>
                     <div>
                       <h4 class="text-xs font-bold text-slate-300 line-through">${ride.name}</h4>
-                      <span class="text-[10px] font-mono text-rose-400 font-semibold">SKIPPED BY REQUEST (Severe Drop Factor)</span>
+                      <p class="text-[10px] text-rose-300 font-semibold">SKIPPED • Drop Tower Anxiety Free</p>
                     </div>
                   </div>
-                  <span class="text-[9px] text-slate-400 font-mono">DCA</span>
+                  <span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300">SKIP</span>
                 </div>
-                <p class="text-[11px] text-slate-400 pl-8 leading-snug">
-                  Instead, enjoy <strong class="text-cyan-300">WEB SLINGERS</strong>, <strong class="text-cyan-300">Soarin'</strong>, or an extra spin on <strong class="text-cyan-300">Incredicoaster / Radiator Springs Racers</strong>!
-                </p>
               </div>
             `;
           }
 
-          // Instagram Story Check-In Section
-          let storiesHtml = '';
+          let tagsHtml = '';
+          if (ride.llmp) {
+            tagsHtml += `<span class="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30">LL Multi Pass</span>`;
+          } else if (ride.singlePass) {
+            tagsHtml += `<span class="px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300 text-[9px] font-mono font-bold border border-amber-400/30">Single Pass ($)</span>`;
+          } else {
+            tagsHtml += `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px] font-mono">Standby Only</span>`;
+          }
+
+          if (ride.singleRider) {
+            tagsHtml += `<span class="px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 text-[9px] font-mono font-bold border border-cyan-400/30">Single Rider</span>`;
+          }
+
+          let storySection = '';
           if (photos.length > 0) {
-            const latestPhoto = photos[photos.length - 1];
-            const bubblesHtml = photos.map((p, pIdx) => `
-              <div onclick="openRideStoryLightbox('${ride.id}', ${pIdx})" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect group">
-                <div class="w-12 h-12 rounded-full story-ring-gradient p-[2px] shadow-md group-hover:scale-105 transition-transform">
+            const bubbles = photos.map((p, idx) => `
+              <div onclick="openRideStoryLightbox('${ride.id}', ${idx})" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect">
+                <div class="w-10 h-10 rounded-full story-ring-gradient p-[2px]">
                   <div class="w-full h-full bg-disney-midnight rounded-full p-[2px]">
                     <img src="${p.dataUrl}" alt="Story" class="w-full h-full object-cover rounded-full">
                   </div>
                 </div>
-                <span class="text-[9px] font-mono text-slate-300 mt-1 truncate max-w-[48px]">Story ${pIdx + 1}</span>
+                <span class="text-[8px] font-mono text-slate-300 mt-0.5 truncate max-w-[40px]">Story ${idx + 1}</span>
               </div>
             `).join('');
 
-            storiesHtml = `
-              <div class="mt-2.5 space-y-2 pt-2 border-t border-white/5">
-                <!-- Instagram Story Hero Preview -->
-                <div onclick="openRideStoryLightbox('${ride.id}', ${photos.length - 1})" class="relative rounded-2xl overflow-hidden group cursor-pointer tap-effect border border-white/10 shadow-lg">
-                  <img src="${latestPhoto.dataUrl}" alt="${ride.name} Story" class="w-full h-36 object-cover group-hover:scale-102 transition-transform duration-300">
-                  <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-between p-3">
-                    <div class="flex items-center justify-between">
-                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-bold text-white border border-white/20 font-mono">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        ${photos.length} Stor${photos.length > 1 ? 'ies' : 'y'}
-                      </span>
-                      <button onclick="deleteRideStoryPhoto('${ride.id}', '${latestPhoto.id}', event)" class="w-6 h-6 rounded-full bg-black/60 backdrop-blur-md text-slate-300 hover:text-rose-400 flex items-center justify-center text-xs tap-effect" title="Delete latest">
-                        <i class="ph-bold ph-trash"></i>
-                      </button>
-                    </div>
-                    <div>
-                      <p class="text-[10px] text-amber-300 font-mono flex items-center gap-1">
-                        <i class="ph-bold ph-clock"></i> ${latestPhoto.checkinTimestamp}
-                      </p>
-                      <p class="text-xs font-bold text-white tracking-tight">Tap to view full story ➔</p>
-                    </div>
+            storySection = `
+              <div class="mt-2 pt-2 border-t border-white/5 flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                <div onclick="triggerRideStoryCapture('${ride.id}')" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect">
+                  <div class="w-10 h-10 rounded-full border border-dashed border-amber-400/50 bg-amber-400/5 flex items-center justify-center">
+                    <i class="ph-bold ph-plus text-amber-300 text-xs"></i>
                   </div>
+                  <span class="text-[8px] text-amber-400 font-semibold mt-0.5">Add</span>
                 </div>
-
-                <!-- Instagram Highlight Avatars & Add Story Bubble -->
-                <div class="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1">
-                  <!-- Add Photo Bubble -->
-                  <div onclick="triggerRideStoryCapture('${ride.id}')" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect">
-                    <div class="w-12 h-12 rounded-full border-2 border-dashed border-amber-400/60 bg-amber-400/5 flex items-center justify-center">
-                      <div class="w-10 h-10 rounded-full bg-disney-midnight flex items-center justify-center text-amber-400">
-                        <i class="ph-bold ph-plus text-base"></i>
-                      </div>
-                    </div>
-                    <span class="text-[9px] text-amber-400 font-semibold mt-1">Add Story</span>
-                  </div>
-                  ${bubblesHtml}
-                </div>
-              </div>
-            `;
-          } else {
-            storiesHtml = `
-              <div class="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between">
-                <button onclick="triggerRideStoryCapture('${ride.id}')" class="tap-effect inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-disney-card to-slate-800 border border-white/10 hover:border-amber-400/40 text-xs font-semibold text-slate-200 group">
-                  <div class="w-5 h-5 rounded-full story-ring-gradient p-[1px] flex items-center justify-center">
-                    <div class="w-full h-full bg-disney-midnight rounded-full flex items-center justify-center text-white text-[10px]">
-                      <i class="ph-bold ph-camera"></i>
-                    </div>
-                  </div>
-                  <span>Add Instagram Story</span>
-                </button>
-                <span class="text-[10px] text-slate-400 font-mono">${ride.intensity}</span>
+                ${bubbles}
               </div>
             `;
           }
 
           return `
-            <div class="glass-card rounded-2xl p-3.5 space-y-2 border-white/10 ${isDone ? 'border-emerald-500/35 bg-disney-midnight/90' : 'hover:border-white/20'}" data-ride-id="${ride.id}">
+            <div class="p-3 rounded-2xl glass-card border border-white/10 ${isRidden ? 'border-emerald-500/40 bg-emerald-950/15' : ''}">
               <div class="flex items-start justify-between gap-2">
-                <div class="flex items-center gap-3 flex-1">
-                  <!-- Checkbox Circle -->
-                  <button onclick="toggleRideRidden('${ride.id}', event)" class="w-7 h-7 rounded-full flex items-center justify-center transition-all ${isDone ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 text-disney-midnight shadow-md shadow-emerald-500/20' : 'border-2 border-slate-600 bg-disney-midnight hover:border-amber-400 text-transparent'}">
-                    <i class="ph-bold ph-check text-base ${isDone ? 'block' : ''}"></i>
-                  </button>
-                  <div class="flex-1">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                      <h4 class="text-xs font-bold ${isDone ? 'text-emerald-300' : 'text-white'}">${ride.name}</h4>
-                      ${isDone ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-bold font-mono">RIDDEN</span>' : ''}
-                    </div>
-                    <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-                      ${badgesHtml}
-                    </div>
+                <div class="flex-1 cursor-pointer" onclick="toggleRideRidden('${ride.id}', event)">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <h4 class="text-xs font-bold ${isRidden ? 'text-emerald-300' : 'text-white'}">${ride.name}</h4>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mt-0.5">${ride.thrill}</p>
+                  <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    ${tagsHtml}
                   </div>
                 </div>
+                
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                  <button onclick="triggerRideStoryCapture('${ride.id}')" class="w-8 h-8 rounded-xl bg-slate-800 border border-white/10 hover:border-amber-400/40 text-amber-300 flex items-center justify-center tap-effect" title="Snap Instagram Story">
+                    <i class="ph-bold ph-camera text-sm"></i>
+                  </button>
+                  <button onclick="toggleRideRidden('${ride.id}', event)" class="w-8 h-8 rounded-xl ${isRidden ? 'bg-emerald-500 text-disney-midnight font-bold shadow-md shadow-emerald-500/20' : 'bg-disney-midnight border border-white/20 text-slate-400'} flex items-center justify-center tap-effect">
+                    <i class="ph-bold ${isRidden ? 'ph-check-bold text-base' : 'ph-check text-xs'}"></i>
+                  </button>
+                </div>
               </div>
-              ${storiesHtml}
+              ${storySection}
             </div>
           `;
         }).join('');
 
         return `
           <div class="space-y-2">
-            <!-- Land Header -->
-            <div class="flex items-center justify-between px-1 pt-1">
-              <h3 class="text-xs font-extrabold text-white flex items-center gap-1.5">
-                <i class="ph-fill ph-compass text-amber-400"></i> ${landName}
+            <div class="flex items-center justify-between px-1">
+              <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <i class="ph-fill ph-map-pin text-amber-400"></i> ${landName}
               </h3>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full border ${parkBadgeColor} font-semibold">${parkBadge}</span>
+              ${parkBadge}
             </div>
             <div class="space-y-2">
               ${ridesHtml}
@@ -2242,59 +1681,107 @@
       }).join('');
     }
 
-    // Capture photo for Ride Story
-    let activeRideForStory = null;
-    function triggerRideStoryCapture(rideId) {
-      activeRideForStory = rideId;
-      const input = document.getElementById('generalPhotoPicker');
-      input.value = '';
-      input.click();
-    }
+    // ================= INSTAGRAM STORY LIGHTBOX CONTROLS =================
+    let activeStoryRideId = null;
+    let activeStoryPhotoIdx = 0;
 
-    // Story Lightbox logic
     function openRideStoryLightbox(rideId, photoIdx = 0) {
       const checkin = checkinData[rideId];
       if (!checkin || !Array.isArray(checkin.photos) || !checkin.photos.length) return;
 
       activeStoryRideId = rideId;
       activeStoryPhotoIdx = Math.max(0, Math.min(photoIdx, checkin.photos.length - 1));
-
       updateStoryLightboxUI();
       document.getElementById('photoLightboxModal').classList.remove('hidden');
     }
 
-    function updateStoryLightboxUI() {
-      const checkin = checkinData[activeStoryRideId];
-      if (!checkin || !Array.isArray(checkin.photos) || !checkin.photos[activeStoryPhotoIdx]) {
-        closeLightbox(null, true);
-        return;
-      }
-
-      const photo = checkin.photos[activeStoryPhotoIdx];
+    function openLightboxManual(dataUrl, title, timestamp) {
+      const modal = document.getElementById('photoLightboxModal');
       const img = document.getElementById('lightboxImage');
-      const title = document.getElementById('lightboxTitle');
-      const time = document.getElementById('lightboxTime');
-      const counter = document.getElementById('lightboxStoryCounter');
-      const barsContainer = document.getElementById('storyProgressBars');
+      const titleEl = document.getElementById('lightboxTitle');
+      const timeEl = document.getElementById('lightboxTime');
+      const counterEl = document.getElementById('lightboxStoryCounter');
+      const progressBars = document.getElementById('storyProgressBars');
+      const prevBtn = document.getElementById('lightboxPrevBtn');
+      const nextBtn = document.getElementById('lightboxNextBtn');
       const deleteBtn = document.getElementById('lightboxDeleteBtn');
 
-      title.textContent = checkin.title || 'Disney Story';
-      time.textContent = photo.checkinTimestamp || 'Captured Today';
+      if (img) img.src = dataUrl;
+      if (titleEl) titleEl.textContent = title;
+      if (timeEl) timeEl.textContent = timestamp;
+      if (counterEl) counterEl.textContent = 'Single Memory';
+      if (prevBtn) prevBtn.classList.add('hidden');
+      if (nextBtn) nextBtn.classList.add('hidden');
+      if (progressBars) progressBars.innerHTML = '<div class="h-1 flex-1 bg-white rounded-full"></div>';
+
+      activeStoryRideId = null;
+      if (deleteBtn) deleteBtn.onclick = () => closeLightbox(null, true);
+      modal.classList.remove('hidden');
+    }
+
+    function updateStoryLightboxUI() {
+      const checkin = checkinData[activeStoryRideId];
+      if (!checkin) return;
+      const photos = Array.isArray(checkin.photos) ? checkin.photos : [{
+        id: 'legacy',
+        dataUrl: checkin.dataUrl,
+        checkinTimestamp: checkin.timestamp || 'Today'
+      }];
+
+      if (!photos[activeStoryPhotoIdx]) return;
+      const photo = photos[activeStoryPhotoIdx];
+
+      const img = document.getElementById('lightboxImage');
+      const titleEl = document.getElementById('lightboxTitle');
+      const timeEl = document.getElementById('lightboxTime');
+      const counterEl = document.getElementById('lightboxStoryCounter');
+      const progressBars = document.getElementById('storyProgressBars');
+      const prevBtn = document.getElementById('lightboxPrevBtn');
+      const nextBtn = document.getElementById('lightboxNextBtn');
+      const deleteBtn = document.getElementById('lightboxDeleteBtn');
+
       img.src = photo.dataUrl;
+      titleEl.textContent = checkin.title || 'Disney Ride Story';
+      timeEl.textContent = photo.checkinTimestamp || 'Today';
+      counterEl.textContent = `Story ${activeStoryPhotoIdx + 1} of ${photos.length}`;
 
-      if (counter) counter.textContent = `Story ${activeStoryPhotoIdx + 1} of ${checkin.photos.length}`;
-
-      // Progress bars segment
-      if (barsContainer) {
-        barsContainer.innerHTML = checkin.photos.map((p, idx) => `
-          <div class="h-1 flex-1 bg-white/25 rounded-full overflow-hidden">
-            <div class="h-full bg-white rounded-full transition-all" style="width: ${idx <= activeStoryPhotoIdx ? '100%' : '0%'}"></div>
-          </div>
-        `).join('');
+      if (photos.length > 1) {
+        prevBtn.classList.remove('hidden');
+        nextBtn.classList.remove('hidden');
+      } else {
+        prevBtn.classList.add('hidden');
+        nextBtn.classList.add('hidden');
       }
 
+      // Instagram progress segments
+      progressBars.innerHTML = photos.map((_, idx) => `
+        <div class="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
+          <div class="h-full bg-white rounded-full transition-all duration-300 ${idx <= activeStoryPhotoIdx ? 'w-full' : 'w-0'}"></div>
+        </div>
+      `).join('');
+
       deleteBtn.onclick = () => {
-        deleteRideStoryPhoto(activeStoryRideId, photo.id);
+        if (confirm('Delete this story slide?')) {
+          const photoId = photo.id;
+          if (Array.isArray(checkin.photos)) {
+            checkin.photos = checkin.photos.filter(p => p.id !== photoId);
+            if (checkin.photos.length === 0) {
+              delete checkinData[activeStoryRideId];
+              closeLightbox(null, true);
+            } else {
+              activeStoryPhotoIdx = Math.max(0, activeStoryPhotoIdx - 1);
+              updateStoryLightboxUI();
+            }
+          } else {
+            delete checkinData[activeStoryRideId];
+            closeLightbox(null, true);
+          }
+          saveStorage();
+          renderAllRidesView();
+          renderTimeline();
+          renderAlbumView();
+          showToast('Story removed');
+        }
       };
     }
 
@@ -2314,221 +1801,719 @@
       updateStoryLightboxUI();
     }
 
-    function deleteRideStoryPhoto(rideId, photoId, event) {
-      if (event) event.stopPropagation();
-      const checkin = checkinData[rideId];
-      if (!checkin || !Array.isArray(checkin.photos)) return;
+    function closeLightbox(event, force = false) {
+      if (force || (event && event.target.id === 'photoLightboxModal')) {
+        const modal = document.getElementById('photoLightboxModal');
+        if (modal) modal.classList.add('hidden');
+        activeStoryRideId = null;
+      }
+    }
 
-      if (confirm('Delete this story photo?')) {
-        checkin.photos = checkin.photos.filter(p => p.id !== photoId);
-        if (checkin.photos.length === 0) {
-          delete checkinData[rideId];
-          closeLightbox(null, true);
-        } else {
-          activeStoryPhotoIdx = Math.max(0, activeStoryPhotoIdx - 1);
-          updateStoryLightboxUI();
-        }
+    // ================= LIGHTNING LANE MULTI PASS CONTROL DECK =================
+    function renderLLMPDeck() {
+      const container = document.getElementById('activeLLContainer');
+      const countEl = document.getElementById('activeLLCount');
+      const badge = document.getElementById('llmpActiveBadge');
+
+      if (countEl) countEl.textContent = `${simulatedLLMPPasses.length} pass${simulatedLLMPPasses.length !== 1 ? 'es' : ''} held`;
+      if (badge) {
+        if (simulatedLLMPPasses.length > 0) badge.classList.remove('hidden');
+        else badge.classList.add('hidden');
+      }
+
+      if (!container) return;
+
+      if (simulatedLLMPPasses.length === 0) {
+        container.innerHTML = `
+          <div class="glass-card rounded-2xl p-6 text-center space-y-1.5 border-dashed border-white/10">
+            <p class="text-xs font-bold text-slate-300">No active Lightning Lanes currently held</p>
+            <p class="text-[11px] text-slate-400">Tap "Simulate Booking LLMP" above to book your next pass.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = simulatedLLMPPasses.map(pass => `
+        <div class="glass-card rounded-2xl p-3.5 border-purple-500/30 bg-purple-950/20 space-y-2">
+          <div class="flex items-start justify-between">
+            <div>
+              <span class="text-[9px] font-mono font-bold uppercase tracking-wider text-purple-300 px-1.5 py-0.5 rounded bg-purple-500/20 border border-purple-400/30">
+                ${pass.park} Lightning Lane
+              </span>
+              <h4 class="text-xs font-bold text-white mt-1">${pass.ride}</h4>
+              <p class="text-[11px] text-amber-300 font-mono mt-0.5">Return: ${pass.windowStart} – ${pass.windowEnd}</p>
+            </div>
+            <button onclick="redeemLLMPPass('${pass.id}')" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-disney-midnight font-bold text-xs tap-effect shadow-md shadow-emerald-500/20 flex items-center gap-1">
+              <i class="ph-bold ph-scan"></i> Tap In
+            </button>
+          </div>
+          <div class="text-[10px] text-slate-400 pt-1.5 border-t border-white/5 flex items-center justify-between">
+            <span>Next LL unlocks at tap-in OR 120 mins</span>
+            <button onclick="cancelLLMPPass('${pass.id}')" class="text-rose-400 hover:underline">Cancel</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openBookLLModal() {
+      const modal = document.getElementById('bookLLModal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeBookLLModal(event, force = false) {
+      if (force || (event && event.target.id === 'bookLLModal')) {
+        const modal = document.getElementById('bookLLModal');
+        if (modal) modal.classList.add('hidden');
+      }
+    }
+
+    function handleConfirmBookLL(e) {
+      e.preventDefault();
+      const selectVal = document.getElementById('llmpSelectRide').value.split('|');
+      const ride = selectVal[0];
+      const park = selectVal[1] || 'DL';
+      const windowStart = document.getElementById('llmpReturnTime').value;
+      const windowEnd = document.getElementById('llmpReturnEndTime').value;
+
+      const newPass = {
+        id: 'll-' + Date.now(),
+        ride,
+        park,
+        windowStart,
+        windowEnd,
+        bookedAt: Date.now()
+      };
+
+      simulatedLLMPPasses.push(newPass);
+      saveStorage();
+      closeBookLLModal(null, true);
+      renderLLMPDeck();
+      showToast(`⚡ Booked ${ride}! Next slot timer started.`);
+    }
+
+    function redeemLLMPPass(passId) {
+      const pass = simulatedLLMPPasses.find(p => p.id === passId);
+      simulatedLLMPPasses = simulatedLLMPPasses.filter(p => p.id !== passId);
+      saveStorage();
+      renderLLMPDeck();
+      showToast(`🎯 Tapped into ${pass ? pass.ride : 'ride'}! Next LLMP reservation opened NOW!`);
+    }
+
+    function cancelLLMPPass(passId) {
+      simulatedLLMPPasses = simulatedLLMPPasses.filter(p => p.id !== passId);
+      saveStorage();
+      renderLLMPDeck();
+      showToast('Pass cancelled');
+    }
+
+    function resetSimulatedLLMP() {
+      if (confirm('Reset all active simulated Lightning Lane passes?')) {
+        simulatedLLMPPasses = [];
+        saveStorage();
+        renderLLMPDeck();
+        showToast('Passes reset');
+      }
+    }
+
+    function setSimulatedNow() {
+      showToast('⚡ Slot unlocked! Ready to book your next LLMP.');
+      openBookLLModal();
+    }
+
+    // Modal Add Stop
+    function openCardModal() {
+      const modal = document.getElementById('cardEditorModal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeCardModal(event, force = false) {
+      if (force || (event && event.target.id === 'cardEditorModal')) {
+        const modal = document.getElementById('cardEditorModal');
+        if (modal) modal.classList.add('hidden');
+      }
+    }
+
+    function handleSaveCard(e) {
+      e.preventDefault();
+      const phase = document.getElementById('editCardPhase').value;
+      const sortTime = document.getElementById('editCardSortTime').value || '08:00';
+      const timeLabel = document.getElementById('editCardTimeLabel').value;
+      const title = document.getElementById('editCardTitle').value;
+      const category = document.getElementById('editCardCategory').value;
+      const tag = document.getElementById('editCardTag').value || 'Stop';
+      const desc = document.getElementById('editCardDesc').value;
+      const mapStop = document.getElementById('editCardMapStop').value || null;
+
+      const newCard = {
+        id: 'custom-' + Date.now(),
+        phase,
+        sortTime,
+        timeLabel,
+        title,
+        category,
+        tag,
+        desc,
+        mapStop
+      };
+
+      disneyCards.push(newCard);
+      saveStorage();
+      closeCardModal(null, true);
+      renderTimeline();
+      showToast('Added stop to timeline! 🏰');
+    }
+
+    function deleteTimelineCard(cardId) {
+      if (confirm('Delete this stop from your itinerary?')) {
+        disneyCards = disneyCards.filter(c => c.id !== cardId);
+        if (checkinData[cardId]) delete checkinData[cardId];
+        saveStorage();
+        renderTimeline();
+        renderAlbumView();
+        showToast('Stop removed');
+      }
+    }
+
+    function clearAllAlbumPhotos() {
+      if (confirm('Clear all photos and stories from your album?')) {
+        checkinData = {};
         saveStorage();
         renderAllRidesView();
         renderTimeline();
         renderAlbumView();
-        showToast('Story photo removed');
+        showToast('Album cleared');
       }
     }
 
-    // Override the general file picker handler to support both ride story check-ins & regular card photos
-    document.getElementById('generalPhotoPicker').addEventListener('change', async function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
+    function previewFoodPhoto(foodId, title) {
+      const img = document.getElementById('img-' + foodId);
+      if (!img) return;
+      openLightboxManual(img.src, title, 'Food Item');
+    }
 
-      showToast("Compressing & saving story...");
-      try {
-        const compressed = await compressImageFile(file, 850, 850, 0.72);
-        const now = new Date();
-        const timestamp = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-        if (activeRideForStory) {
-          // Ride Story Mode
-          const ride = allDisneyRides.find(r => r.id === activeRideForStory);
-          const rideName = ride ? ride.name : 'Disney Ride';
-
-          if (!checkinData[activeRideForStory]) {
-            checkinData[activeRideForStory] = {
-              title: rideName,
-              photos: []
-            };
-          } else if (!Array.isArray(checkinData[activeRideForStory].photos)) {
-            checkinData[activeRideForStory].photos = [];
-          }
-
-          checkinData[activeRideForStory].title = rideName;
-          checkinData[activeRideForStory].photos.push({
-            id: 'p-' + Date.now(),
-            dataUrl: compressed,
-            checkinTimestamp: timestamp,
-            rawTime: Date.now()
-          });
-
-          // Automatically mark ride as completed when photo is added
-          riddenRidesSet.add(activeRideForStory);
-          saveRidesStorage();
-          saveStorage();
-
-          renderAllRidesView();
-          renderAlbumView();
-          showToast(`📸 Added Instagram story to ${rideName}!`);
-          activeRideForStory = null;
-        } else if (photoTargetType === 'card' && photoTargetId) {
-          // Plan / Timeline Story Mode (matching Ride Story capabilities)
-          const card = disneyCards.find(c => c.id === photoTargetId);
-          const cardTitle = card ? card.title : 'Disney Stop';
-
-          if (!checkinData[photoTargetId]) {
-            checkinData[photoTargetId] = {
-              title: cardTitle,
-              photos: []
-            };
-          } else if (!Array.isArray(checkinData[photoTargetId].photos)) {
-            const existingUrl = checkinData[photoTargetId].dataUrl;
-            checkinData[photoTargetId].photos = existingUrl ? [{
-              id: 'p-legacy-' + Date.now(),
-              dataUrl: existingUrl,
-              checkinTimestamp: checkinData[photoTargetId].timestamp || timestamp,
-              rawTime: Date.now() - 1000
-            }] : [];
-          }
-
-          checkinData[photoTargetId].title = cardTitle;
-          checkinData[photoTargetId].photos.push({
-            id: 'p-' + Date.now(),
-            dataUrl: compressed,
-            checkinTimestamp: timestamp,
-            rawTime: Date.now()
-          });
-
-          saveStorage();
-          renderTimeline();
-          renderAlbumView();
-          showToast(`📸 Added Instagram story to ${cardTitle}!`);
-          photoTargetType = null;
-          photoTargetId = null;
-        } else if (photoTargetType === 'food' && photoTargetId) {
-          const img = document.getElementById('img-' + photoTargetId);
-          const badge = document.getElementById('badge-' + photoTargetId);
-          if (img) img.src = compressed;
-          if (badge) badge.classList.remove('hidden');
-
-          checkinData['food-' + photoTargetId] = {
-            title: photoTargetId.replace('-', ' ').toUpperCase(),
-            dataUrl: compressed,
-            timestamp: timestamp,
-            rawTime: Date.now()
-          };
-          saveStorage();
-          renderAlbumView();
-          showToast("Dining photo snapped & saved! 🍔✨");
-        }
-      } catch (err) {
-        console.error(err);
-        showToast("Error processing photo");
+    function resetAllDiningPhotos() {
+      if (confirm('Reset custom food pictures to defaults?')) {
+        Object.keys(checkinData).forEach(k => {
+          if (k.startsWith('food-')) delete checkinData[k];
+        });
+        saveStorage();
+        renderAlbumView();
+        showToast('Food photos reset');
       }
-    });
+    }
 
-    // Modified Album Renderer to aggregate individual multi-photo stories
-    function renderAlbumView() {
-      const grid = document.getElementById('albumGrid');
-      const empty = document.getElementById('albumEmptyState');
-      const countStat = document.getElementById('albumCountStat');
-      const remStat = document.getElementById('albumRemainingStat');
-      const storageStat = document.getElementById('albumStorageStat');
-      const badge = document.getElementById('albumBadge');
+    // ================= LEAFLET GPS RESORT MAP LOGIC =================
+    let disneyMapInstance = null;
+    let resortMapMarkers = [];
 
-      const flattenedPhotos = [];
-      Object.entries(checkinData).forEach(([slotId, entry]) => {
-        if (entry) {
-          if (Array.isArray(entry.photos)) {
-            entry.photos.forEach((p, idx) => {
-              flattenedPhotos.push({
-                slotId,
-                title: entry.title || 'Disney Memory',
-                dataUrl: p.dataUrl,
-                timestamp: p.checkinTimestamp || 'Today',
-                rawTime: p.rawTime || 0,
-                photoId: p.id
-              });
-            });
-          } else if (entry.dataUrl) {
-            flattenedPhotos.push({
-              slotId,
-              title: entry.title || 'Disney Memory',
-              dataUrl: entry.dataUrl,
-              timestamp: entry.timestamp || 'Today',
-              rawTime: entry.rawTime || 0
-            });
-          }
-        }
-      });
+    const disneyMapLocations = [
+      { id: 'spacemtn', name: 'Space Mountain', park: 'dl', lat: 33.8105, lng: -117.9174, desc: 'Tomorrowland • Rope Drop Sprint Target' },
+      { id: 'indy', name: 'Indiana Jones Adventure', park: 'dl', lat: 33.8115, lng: -117.9205, desc: 'Adventureland • LLMP #1 Priority' },
+      { id: 'bigthunder', name: 'Big Thunder Mountain', park: 'dl', lat: 33.8129, lng: -117.9209, desc: 'Frontierland • Morning Standby Run' },
+      { id: 'pirates', name: 'Pirates of the Caribbean', park: 'dl', lat: 33.8118, lng: -117.9221, desc: 'New Orleans Square • No LLMP (Standby Essential)' },
+      { id: 'matterhorn', name: 'Matterhorn Bobsleds', park: 'dl', lat: 33.8130, lng: -117.9184, desc: 'Fantasyland • Single Rider Available' },
+      { id: 'rise', name: 'Rise of the Resistance', park: 'dl', lat: 33.8152, lng: -117.9223, desc: 'Star Wars: Galaxy\'s Edge • Single Pass ($26)' },
+      { id: 'castle', name: 'Sleeping Beauty Castle', park: 'dl', lat: 33.8121, lng: -117.9190, desc: 'Central Plaza Hub • Fireworks & Rope Line' },
+      { id: 'guardians', name: 'Guardians of the Galaxy (SKIPPED)', park: 'dca', lat: 33.8068, lng: -117.9175, desc: 'Avengers Campus • Skipped for comfort' },
+      { id: 'carsracers', name: 'Radiator Springs Racers', park: 'dca', lat: 33.8052, lng: -117.9198, desc: 'Cars Land • Single Rider Bypass ($0)' },
+      { id: 'incredicoaster', name: 'Incredicoaster', park: 'dca', lat: 33.8041, lng: -117.9218, desc: 'Pixar Pier • Fast Single Rider Line' },
+      { id: 'soarin', name: 'Soarin\' Around the World', park: 'dca', lat: 33.8085, lng: -117.9212, desc: 'Grizzly Peak • Smooth Gentle Flight' },
+      { id: 'toystory', name: 'Toy Story Midway Mania!', park: 'dca', lat: 33.8048, lng: -117.9213, desc: 'Pixar Pier • 4D Midway Games' },
+      { id: 'webslingers', name: 'WEB SLINGERS', park: 'dca', lat: 33.8078, lng: -117.9188, desc: 'Avengers Campus • Interactive Screen Action' },
+      { id: 'jollyholiday', name: 'Jolly Holiday Bakery', park: 'dl', lat: 33.8115, lng: -117.9193, desc: 'Main Street Hub • Birria Grilled Cheese' },
+      { id: 'pymtest', name: 'Pym Test Kitchen', park: 'dca', lat: 33.8075, lng: -117.9190, desc: 'Avengers Campus • Quantum Pretzel' },
+      { id: 'cozycone', name: 'Cozy Cone Motel', park: 'dca', lat: 33.8057, lng: -117.9192, desc: 'Cars Land • Chili Cone Queso' },
+      { id: 'bengalbbq', name: 'Bengal Barbecue', park: 'dl', lat: 33.8113, lng: -117.9200, desc: 'Adventureland • Banyan Beef Skewers' }
+    ];
 
-      const count = flattenedPhotos.length;
-      if (countStat) countStat.textContent = count;
-      if (remStat) remStat.textContent = Math.max(0, 48 - count);
-
-      const raw = JSON.stringify(checkinData);
-      const kb = Math.round(new Blob([raw]).size / 1024);
-      if (storageStat) storageStat.textContent = `${kb} KB`;
-
-      if (badge) {
-        if (count > 0) badge.classList.remove('hidden');
-        else badge.classList.add('hidden');
-      }
-
-      if (count === 0) {
-        if (grid) grid.innerHTML = '';
-        if (empty) empty.classList.remove('hidden');
+    function initResortMap() {
+      if (disneyMapInstance) {
+        setTimeout(() => disneyMapInstance.invalidateSize(), 200);
         return;
       }
 
-      if (empty) empty.classList.add('hidden');
-      flattenedPhotos.sort((a, b) => (b.rawTime || 0) - (a.rawTime || 0));
+      disneyMapInstance = L.map('disneyLeafletMap').setView([33.8095, -117.9190], 15);
 
-      if (grid) {
-        grid.innerHTML = flattenedPhotos.map(item => `
-          <div class="glass-card rounded-2xl overflow-hidden border-white/10 p-2 space-y-2">
-            <div class="relative rounded-xl overflow-hidden group cursor-pointer tap-effect" onclick="openLightboxManual('${item.dataUrl}', '${item.title.replace(/'/g, "\\'")}', '${item.timestamp}')">
-              <img src="${item.dataUrl}" class="w-full h-36 object-cover" alt="${item.title}">
-              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2">
-                <span class="text-[10px] font-mono text-amber-300 font-bold truncate">${item.timestamp}</span>
+      L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        subdomains: ['0', '1', '2', '3'],
+        maxZoom: 20,
+        attribution: '© Google Maps'
+      }).addTo(disneyMapInstance);
+
+      renderResortMarkers('all');
+    }
+
+    function renderResortMarkers(category = 'all') {
+      resortMapMarkers.forEach(m => disneyMapInstance.removeLayer(m));
+      resortMapMarkers = [];
+
+      disneyMapLocations.forEach(loc => {
+        if (category === 'dl' && loc.park !== 'dl') return;
+        if (category === 'dca' && loc.park !== 'dca') return;
+        if (category === 'food' && !['jollyholiday', 'pymtest', 'cozycone', 'bengalbbq'].includes(loc.id)) return;
+
+        let pinColor = loc.park === 'dl' ? '#fbbf24' : '#06b6d4';
+        if (loc.id.includes('holiday') || loc.id.includes('pym') || loc.id.includes('cone') || loc.id.includes('bbq')) pinColor = '#fb7185';
+
+        const customIcon = L.divIcon({
+          className: 'disney-map-pin',
+          html: `<div style="background-color: ${pinColor}; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #000;">★</div>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13]
+        });
+
+        const marker = L.marker([loc.lat, loc.lng], { icon: customIcon }).addTo(disneyMapInstance);
+        marker.bindPopup(`
+          <div style="min-width: 170px;">
+            <strong style="color: #fff; font-size: 12px;">${loc.name}</strong>
+            <p style="color: #94a3b8; font-size: 10px; margin-top: 3px;">${loc.desc}</p>
+            <div style="margin-top: 6px;">
+              <a href="https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}" target="_blank" style="font-size: 10px; color: #000; background: #fbbf24; padding: 3px 8px; border-radius: 6px; font-weight: bold; text-decoration: none;">Walk Navigation ➔</a>
+            </div>
+          </div>
+        `);
+        marker.destinationId = loc.id;
+        resortMapMarkers.push(marker);
+      });
+    }
+
+    function setMapLayer(type) {
+      if (!disneyMapInstance) return;
+      const btnRoad = document.getElementById('btn-map-roadmap');
+      const btnSat = document.getElementById('btn-map-satellite');
+
+      disneyMapInstance.eachLayer(layer => {
+        if (layer instanceof L.TileLayer) disneyMapInstance.removeLayer(layer);
+      });
+
+      const lyrs = type === 'satellite' ? 'y' : 'm';
+      L.tileLayer(`https://mt{s}.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}`, {
+        subdomains: ['0', '1', '2', '3'],
+        maxZoom: 20
+      }).addTo(disneyMapInstance);
+
+      if (type === 'satellite') {
+        btnRoad.className = 'px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white tap-effect transition-all flex items-center gap-1';
+        btnSat.className = 'px-2.5 py-1 rounded-lg font-bold bg-cyan-400 text-disney-midnight tap-effect transition-all flex items-center gap-1';
+      } else {
+        btnRoad.className = 'px-2.5 py-1 rounded-lg font-bold bg-amber-400 text-disney-midnight tap-effect transition-all flex items-center gap-1';
+        btnSat.className = 'px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white tap-effect transition-all flex items-center gap-1';
+      }
+
+      renderResortMarkers('all');
+    }
+
+    function filterMapCategory(cat) {
+      document.querySelectorAll('.map-chip').forEach(c => {
+        c.classList.remove('bg-amber-400', 'text-disney-midnight');
+        c.classList.add('bg-disney-card', 'text-slate-300');
+      });
+      const activeChip = document.getElementById('map-chip-' + cat);
+      if (activeChip) {
+        activeChip.classList.remove('bg-disney-card', 'text-slate-300');
+        activeChip.classList.add('bg-amber-400', 'text-disney-midnight');
+      }
+      renderResortMarkers(cat);
+    }
+
+    function resetResortMap() {
+      if (disneyMapInstance) disneyMapInstance.setView([33.8095, -117.9190], 15);
+    }
+
+    function flyToMapStop(stopId) {
+      switchTab('map');
+      setTimeout(() => {
+        const target = disneyMapLocations.find(l => l.id === stopId);
+        if (target && disneyMapInstance) {
+          disneyMapInstance.flyTo([target.lat, target.lng], 17, { duration: 1 });
+          const marker = resortMapMarkers.find(m => m.destinationId === stopId);
+          if (marker) setTimeout(() => marker.openPopup(), 1000);
+        }
+      }, 150);
+    }
+
+    // ================= TIMELINE RENDERING & STORY ACTIONS =================
+    function renderTimeline() {
+      const container = document.getElementById('timelineContainer');
+      const progressText = document.getElementById('progressStopsText');
+      const progressBar = document.getElementById('stopsProgressBar');
+      if (!container) return;
+
+      const filteredCards = disneyCards
+        .filter(card => activeCardPhase === 'all' || card.phase === activeCardPhase)
+        .sort((a, b) => (a.sortTime || '00:00').localeCompare(b.sortTime || '00:00'));
+
+      const completedStops = disneyCards.filter(c => checkinData[c.id] && Array.isArray(checkinData[c.id].photos) && checkinData[c.id].photos.length > 0).length;
+      const totalStops = disneyCards.length;
+      const pct = totalStops > 0 ? Math.round((completedStops / totalStops) * 100) : 0;
+
+      if (progressText) progressText.textContent = `${completedStops} / ${totalStops}`;
+      if (progressBar) progressBar.style.width = `${pct}%`;
+
+      if (filteredCards.length === 0) {
+        container.innerHTML = `
+          <div class="glass-card rounded-2xl p-8 text-center space-y-2">
+            <h4 class="text-sm font-bold text-white">No stops in this phase</h4>
+            <p class="text-xs text-slate-400">Tap "+ Add Stop" above to customize your timeline.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filteredCards.map(card => {
+        const checkin = checkinData[card.id];
+        const photos = (checkin && Array.isArray(checkin.photos)) ? checkin.photos : [];
+
+        let badgeColor = 'bg-amber-400/15 text-amber-300 border border-amber-400/30';
+        if (card.category === 'ropedrop') badgeColor = 'bg-rose-500/15 text-rose-300 border border-rose-500/30';
+        if (card.category === 'llmp') badgeColor = 'bg-purple-500/15 text-purple-300 border border-purple-500/30';
+        if (card.category === 'single') badgeColor = 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30';
+        if (card.category === 'food') badgeColor = 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+
+        let mapBtn = '';
+        if (card.mapStop) {
+          mapBtn = `
+            <button onclick="flyToMapStop('${card.mapStop}')" class="text-[10px] font-semibold text-amber-400 hover:underline flex items-center gap-1 tap-effect">
+              <i class="ph-bold ph-map-pin"></i> View Map
+            </button>
+          `;
+        }
+
+        let storySection = '';
+        if (photos.length > 0) {
+          const featuredPhoto = photos[photos.length - 1];
+          const storyBubbles = photos.map((p, idx) => `
+            <div onclick="openRideStoryLightbox('${card.id}', ${idx})" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect">
+              <div class="w-11 h-11 rounded-full story-ring-gold p-[2px]">
+                <div class="w-full h-full bg-disney-midnight rounded-full p-[2px]">
+                  <img src="${p.dataUrl}" alt="Story" class="w-full h-full object-cover rounded-full">
+                </div>
+              </div>
+              <span class="text-[8px] font-mono text-slate-300 mt-0.5 truncate max-w-[44px]">Story ${idx + 1}</span>
+            </div>
+          `).join('');
+
+          storySection = `
+            <div class="mt-2.5 space-y-2 pt-2 border-t border-white/5">
+              <div class="relative rounded-xl overflow-hidden cursor-pointer tap-effect shadow-md border border-white/10" onclick="openRideStoryLightbox('${card.id}', ${photos.length - 1})">
+                <img src="${featuredPhoto.dataUrl}" alt="Hero Story" class="w-full h-36 object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end justify-between p-2.5">
+                  <span class="text-[10px] font-mono font-bold text-amber-300 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                    ${featuredPhoto.checkinTimestamp || 'Today'}
+                  </span>
+                  <span class="text-[10px] text-white font-semibold">Tap to view ➔</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                <div onclick="triggerTimelineStoryCapture('${card.id}')" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect">
+                  <div class="w-11 h-11 rounded-full border border-dashed border-amber-400/50 bg-amber-400/5 flex items-center justify-center">
+                    <i class="ph-bold ph-plus text-amber-300 text-sm"></i>
+                  </div>
+                  <span class="text-[8px] text-amber-400 font-semibold mt-0.5">Add</span>
+                </div>
+                ${storyBubbles}
               </div>
             </div>
-            <div class="px-1 flex items-center justify-between">
-              <h4 class="text-xs font-bold text-white truncate">${item.title}</h4>
-              <button onclick="deleteSingleAlbumPhoto('${item.slotId}', '${item.photoId || ''}', event)" class="text-slate-400 hover:text-rose-400 text-xs">
-                <i class="ph-bold ph-trash"></i>
+          `;
+        } else {
+          storySection = `
+            <div class="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between">
+              <button onclick="triggerTimelineStoryCapture('${card.id}')" class="tap-effect text-[11px] font-semibold text-slate-300 hover:text-amber-300 flex items-center gap-1.5 bg-disney-midnight/60 px-3 py-1.5 rounded-xl border border-white/10">
+                <i class="ph-bold ph-camera text-amber-400"></i> Add Story Photo
               </button>
+              ${mapBtn}
+            </div>
+          `;
+        }
+
+        return `
+          <div class="glass-card rounded-2xl p-3.5 border border-white/10 space-y-1.5">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-[11px] font-mono font-bold text-amber-300">${card.timeLabel}</span>
+                  <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${badgeColor}">${card.tag || 'Stop'}</span>
+                </div>
+                <h4 class="text-xs font-bold text-white mt-1">${card.title}</h4>
+              </div>
+              <button onclick="deleteTimelineCard('${card.id}')" class="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 hover:text-rose-400 flex items-center justify-center tap-effect border border-white/5" title="Delete">
+                <i class="ph-bold ph-trash text-xs"></i>
+              </button>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">${card.desc || ''}</p>
+            ${photos.length > 0 && mapBtn ? `<div class="pt-1">${mapBtn}</div>` : ''}
+            ${storySection}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ================= ALBUM / MEMORIES VIEW =================
+    function renderAlbumView() {
+      const grid = document.getElementById('albumGrid');
+      const emptyState = document.getElementById('albumEmptyState');
+      const countStat = document.getElementById('albumCountStat');
+      const remainingStat = document.getElementById('albumRemainingStat');
+      const storageStat = document.getElementById('albumStorageStat');
+      const albumBadge = document.getElementById('albumBadge');
+
+      const allPhotos = [];
+      Object.entries(checkinData).forEach(([slotId, entry]) => {
+        if (entry && Array.isArray(entry.photos)) {
+          entry.photos.forEach((photo, pIdx) => {
+            if (photo && photo.dataUrl) {
+              allPhotos.push({
+                slotId,
+                photoIdx: pIdx,
+                dataUrl: photo.dataUrl,
+                title: entry.title || 'Disney Memory',
+                timestamp: photo.checkinTimestamp || 'Today',
+                rawTime: photo.rawTime || 0
+              });
+            }
+          });
+        }
+      });
+
+      const totalPhotos = allPhotos.length;
+      if (countStat) countStat.textContent = totalPhotos;
+      if (remainingStat) {
+        const completedRides = riddenRidesSet.size;
+        remainingStat.textContent = Math.max(0, 48 - completedRides);
+      }
+
+      const rawBlobSize = new Blob([JSON.stringify(checkinData)]).size;
+      if (storageStat) storageStat.textContent = `${Math.round(rawBlobSize / 1024)} KB`;
+
+      if (albumBadge) {
+        if (totalPhotos > 0) albumBadge.classList.remove('hidden');
+        else albumBadge.classList.add('hidden');
+      }
+
+      if (totalPhotos === 0) {
+        if (grid) grid.innerHTML = '';
+        if (emptyState) emptyState.classList.remove('hidden');
+        return;
+      }
+
+      if (emptyState) emptyState.classList.add('hidden');
+      allPhotos.sort((a, b) => (b.rawTime || 0) - (a.rawTime || 0));
+
+      if (grid) {
+        grid.innerHTML = allPhotos.map(item => `
+          <div class="glass-card rounded-2xl overflow-hidden border border-white/10 p-2 space-y-1.5">
+            <div class="relative rounded-xl overflow-hidden cursor-pointer tap-effect" onclick="openRideStoryLightbox('${item.slotId}', ${item.photoIdx})">
+              <img src="${item.dataUrl}" alt="${item.title}" class="w-full h-32 object-cover">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2">
+                <span class="text-[9px] font-mono text-amber-300 font-bold truncate">${item.timestamp}</span>
+              </div>
+            </div>
+            <div class="px-1">
+              <h4 class="text-xs font-bold text-white truncate">${item.title}</h4>
             </div>
           </div>
         `).join('');
       }
     }
 
-    function deleteSingleAlbumPhoto(slotId, photoId, event) {
-      if (event) event.stopPropagation();
-      const entry = checkinData[slotId];
-      if (!entry) return;
+    // ================= PHOTO CAPTURE & ACTION SHEET WORKFLOW =================
+    function triggerRideStoryCapture(rideId) {
+      photoTargetType = 'ride';
+      photoTargetId = rideId;
+      const ride = allDisneyRides.find(r => r.id === rideId);
+      openPhotoSourceModal(ride ? `Story: ${ride.name}` : 'Add Ride Story');
+    }
 
-      if (confirm('Delete this photo story?')) {
-        if (Array.isArray(entry.photos) && photoId) {
-          entry.photos = entry.photos.filter(p => p.id !== photoId);
-          if (entry.photos.length === 0) delete checkinData[slotId];
-        } else {
-          delete checkinData[slotId];
+    function triggerTimelineStoryCapture(cardId) {
+      photoTargetType = 'timeline';
+      photoTargetId = cardId;
+      const card = disneyCards.find(c => c.id === cardId);
+      openPhotoSourceModal(card ? `Story: ${card.title}` : 'Add Stop Story');
+    }
+
+    function triggerFoodPhotoUpload(foodId) {
+      photoTargetType = 'food';
+      photoTargetId = foodId;
+      openPhotoSourceModal('Capture Food Photo');
+    }
+
+    function openPhotoSourceModal(title = 'Add Disney Story') {
+      const modal = document.getElementById('photoSourceModal');
+      const titleEl = document.getElementById('photoSourceTitle');
+      if (titleEl) titleEl.textContent = title;
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closePhotoSourceModal(event, force = false) {
+      if (force || (event && event.target.id === 'photoSourceModal')) {
+        const modal = document.getElementById('photoSourceModal');
+        if (modal) modal.classList.add('hidden');
+      }
+    }
+
+    function pickFromLiveCamera() {
+      closePhotoSourceModal(null, true);
+      const input = document.getElementById('directCameraInput');
+      if (input) {
+        input.value = '';
+        input.click();
+      }
+    }
+
+    function pickFromPhotoGallery() {
+      closePhotoSourceModal(null, true);
+      const input = document.getElementById('generalPhotoPicker');
+      if (input) {
+        input.value = '';
+        input.click();
+      }
+    }
+
+    async function handleSelectedPhoto(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file || !photoTargetId) return;
+
+      showToast('Processing photo...');
+      window.setCloudStatus('Processing...', 'text-amber-400');
+
+      try {
+        const compressedData = await compressImageFile(file, 900, 900, 0.72);
+        const timestamp = new Intl.DateTimeFormat('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }).format(new Date());
+
+        let targetTitle = 'Disney Magic';
+        if (photoTargetType === 'ride') {
+          const ride = allDisneyRides.find(r => r.id === photoTargetId);
+          if (ride) targetTitle = ride.name;
+          riddenRidesSet.add(photoTargetId);
+          saveRidesStorage();
+        } else if (photoTargetType === 'timeline') {
+          const card = disneyCards.find(c => c.id === photoTargetId);
+          if (card) targetTitle = card.title;
+        } else if (photoTargetType === 'food') {
+          targetTitle = photoTargetId.replace('-', ' ').toUpperCase();
+          const img = document.getElementById('img-' + photoTargetId);
+          const badge = document.getElementById('badge-' + photoTargetId);
+          if (img) img.src = compressedData;
+          if (badge) badge.classList.remove('hidden');
         }
+
+        if (!checkinData[photoTargetId]) {
+          checkinData[photoTargetId] = {
+            title: targetTitle,
+            photos: []
+          };
+        } else if (!Array.isArray(checkinData[photoTargetId].photos)) {
+          checkinData[photoTargetId].photos = [];
+        }
+
+        const newPhotoObj = {
+          id: 'p-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+          dataUrl: compressedData,
+          checkinTimestamp: timestamp,
+          rawTime: Date.now()
+        };
+
+        checkinData[photoTargetId].photos.push(newPhotoObj);
+        checkinData[photoTargetId].title = targetTitle;
+
         saveStorage();
         renderAllRidesView();
         renderTimeline();
         renderAlbumView();
-        showToast('Photo removed');
+
+        if (window.syncCheckinToFirebase) {
+          await window.syncCheckinToFirebase(photoTargetId, checkinData[photoTargetId]);
+        }
+
+        showToast('Story photo added & synced! 📸✨');
+        window.setCloudStatus('Cloud Sync', 'text-emerald-400');
+      } catch (err) {
+        console.error("Photo error:", err);
+        showToast(err.message || 'Could not load photo');
+        window.setCloudStatus('Sync Error', 'text-rose-400');
+      } finally {
+        e.target.value = '';
       }
+    }
+
+    document.getElementById('directCameraInput').addEventListener('change', handleSelectedPhoto);
+    document.getElementById('generalPhotoPicker').addEventListener('change', handleSelectedPhoto);
+
+    // ================= TAB NAVIGATION & UTILS =================
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-view').forEach(v => v.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-amber-400');
+        btn.classList.add('text-slate-400');
+        const icon = btn.querySelector('i');
+        if (icon) icon.className = icon.className.replace('ph-fill', 'ph-bold');
+      });
+
+      const targetView = document.getElementById('view-' + tabName);
+      if (targetView) targetView.classList.remove('hidden');
+
+      const targetBtn = document.getElementById('nav-' + tabName);
+      if (targetBtn) {
+        targetBtn.classList.remove('text-slate-400');
+        targetBtn.classList.add('text-amber-400');
+        const icon = targetBtn.querySelector('i');
+        if (icon) icon.className = icon.className.replace('ph-bold', 'ph-fill');
+      }
+
+      if (tabName === 'map') initResortMap();
+      if (tabName === 'rides') renderAllRidesView();
+      if (tabName === 'timeline') renderTimeline();
+      if (tabName === 'album') renderAlbumView();
+      if (tabName === 'llmp') renderLLMPDeck();
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function switchPhase(phaseKey) {
+      activeCardPhase = phaseKey;
+      document.querySelectorAll('.phase-pill').forEach(pill => {
+        pill.classList.remove('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+        pill.classList.add('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+      });
+      const activePill = document.getElementById('pill-' + phaseKey);
+      if (activePill) {
+        activePill.classList.remove('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+        activePill.classList.add('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+      }
+      renderTimeline();
+    }
+
+    function updateAnaheimClock() {
+      const clockEl = document.getElementById('anaheimClock');
+      if (!clockEl) return;
+      try {
+        const timeStr = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/Los_Angeles',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }).format(new Date());
+        clockEl.textContent = `${timeStr} PST`;
+      } catch (e) {
+        clockEl.textContent = 'PST';
+      }
+    }
+    setInterval(updateAnaheimClock, 1000);
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      if (!toast || !toastMsg) return;
+      toastMsg.textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 2200);
     }
 
     // App Initialization
