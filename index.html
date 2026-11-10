@@ -1614,26 +1614,41 @@
 
           let storySection = '';
           if (photos.length > 0) {
-            const bubbles = photos.map((p, idx) => `
-              <div onclick="openRideStoryLightbox('${ride.id}', ${idx})" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect">
-                <div class="w-10 h-10 rounded-full story-ring-gradient p-[2px]">
-                  <div class="w-full h-full bg-disney-midnight rounded-full p-[2px]">
-                    <img src="${p.dataUrl}" alt="Story" class="w-full h-full object-cover rounded-full">
+            const storyCards = photos.map((p, idx) => `
+              <div class="relative rounded-2xl overflow-hidden aspect-[9/16] group cursor-pointer tap-effect border border-white/15 bg-disney-midnight shadow-lg" onclick="openRideStoryLightbox('${ride.id}', ${idx})">
+                <img src="${p.dataUrl}" alt="Story ${idx + 1}" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-between p-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10">
+                      #${idx + 1}
+                    </span>
+                    <button onclick="deleteSingleStory('${ride.id}', '${p.id}', event)" class="w-6 h-6 rounded-full bg-black/70 text-rose-400 hover:text-white hover:bg-rose-600 flex items-center justify-center text-xs transition-all tap-effect border border-white/20" title="Delete Story">
+                      <i class="ph-bold ph-trash"></i>
+                    </button>
+                  </div>
+                  <div>
+                    <span class="text-[9px] text-amber-300 font-mono font-bold block truncate">${p.checkinTimestamp || 'Today'}</span>
+                    <span class="text-[8px] text-slate-300">Tap to expand ➔</span>
                   </div>
                 </div>
-                <span class="text-[8px] font-mono text-slate-300 mt-0.5 truncate max-w-[40px]">Story ${idx + 1}</span>
               </div>
             `).join('');
 
             storySection = `
-              <div class="mt-2 pt-2 border-t border-white/5 flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-                <div onclick="triggerRideStoryCapture('${ride.id}')" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect">
-                  <div class="w-10 h-10 rounded-full border border-dashed border-amber-400/50 bg-amber-400/5 flex items-center justify-center">
-                    <i class="ph-bold ph-plus text-amber-300 text-xs"></i>
-                  </div>
-                  <span class="text-[8px] text-amber-400 font-semibold mt-0.5">Add</span>
+              <div class="mt-2.5 pt-2 border-t border-white/5 space-y-2">
+                <div class="flex items-center justify-between px-0.5">
+                  <span class="text-[10px] font-mono text-cyan-300 font-bold flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                    ${photos.length} Vertical Stor${photos.length > 1 ? 'ies' : 'y'}
+                  </span>
+                  <button onclick="triggerRideStoryCapture('${ride.id}')" class="text-[10px] font-bold text-amber-300 hover:text-amber-200 flex items-center gap-1 tap-effect">
+                    <i class="ph-bold ph-plus-circle"></i> Add Story
+                  </button>
                 </div>
-                ${bubbles}
+                <!-- 2-Columns Vertical Story Grid (Fits 2 Stories Per Card) -->
+                <div class="grid grid-cols-2 gap-2">
+                  ${storyCards}
+                </div>
               </div>
             `;
           }
@@ -1679,6 +1694,32 @@
           </div>
         `;
       }).join('');
+    }
+
+    // Delete a single story from any ride or timeline card
+    async function deleteSingleStory(slotId, photoId, event) {
+      if (event) event.stopPropagation();
+      const checkin = checkinData[slotId];
+      if (!checkin || !Array.isArray(checkin.photos)) return;
+
+      if (confirm('Delete this story?')) {
+        checkin.photos = checkin.photos.filter(p => p.id !== photoId);
+        if (checkin.photos.length === 0) {
+          delete checkinData[slotId];
+          if (window.deleteCheckinFromFirebase) {
+            await window.deleteCheckinFromFirebase(slotId);
+          }
+        } else {
+          if (window.syncCheckinToFirebase) {
+            await window.syncCheckinToFirebase(slotId, checkin);
+          }
+        }
+        saveStorage();
+        renderAllRidesView();
+        renderTimeline();
+        renderAlbumView();
+        showToast('Story deleted');
+      }
     }
 
     // ================= INSTAGRAM STORY LIGHTBOX CONTROLS =================
@@ -1767,13 +1808,22 @@
             checkin.photos = checkin.photos.filter(p => p.id !== photoId);
             if (checkin.photos.length === 0) {
               delete checkinData[activeStoryRideId];
+              if (window.deleteCheckinFromFirebase) {
+                window.deleteCheckinFromFirebase(activeStoryRideId);
+              }
               closeLightbox(null, true);
             } else {
+              if (window.syncCheckinToFirebase) {
+                window.syncCheckinToFirebase(activeStoryRideId, checkin);
+              }
               activeStoryPhotoIdx = Math.max(0, activeStoryPhotoIdx - 1);
               updateStoryLightboxUI();
             }
           } else {
             delete checkinData[activeStoryRideId];
+            if (window.deleteCheckinFromFirebase) {
+              window.deleteCheckinFromFirebase(activeStoryRideId);
+            }
             closeLightbox(null, true);
           }
           saveStorage();
@@ -2181,38 +2231,40 @@
 
         let storySection = '';
         if (photos.length > 0) {
-          const featuredPhoto = photos[photos.length - 1];
-          const storyBubbles = photos.map((p, idx) => `
-            <div onclick="openRideStoryLightbox('${card.id}', ${idx})" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect">
-              <div class="w-11 h-11 rounded-full story-ring-gold p-[2px]">
-                <div class="w-full h-full bg-disney-midnight rounded-full p-[2px]">
-                  <img src="${p.dataUrl}" alt="Story" class="w-full h-full object-cover rounded-full">
+          const timelineStories = photos.map((p, idx) => `
+            <div class="relative rounded-2xl overflow-hidden aspect-[9/16] group cursor-pointer tap-effect border border-white/15 bg-disney-midnight shadow-lg" onclick="openRideStoryLightbox('${card.id}', ${idx})">
+              <img src="${p.dataUrl}" alt="Story ${idx + 1}" class="w-full h-full object-cover">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-between p-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10">
+                    #${idx + 1}
+                  </span>
+                  <button onclick="deleteSingleStory('${card.id}', '${p.id}', event)" class="w-6 h-6 rounded-full bg-black/70 text-rose-400 hover:text-white hover:bg-rose-600 flex items-center justify-center text-xs transition-all tap-effect border border-white/20" title="Delete Story">
+                    <i class="ph-bold ph-trash"></i>
+                  </button>
+                </div>
+                <div>
+                  <span class="text-[9px] text-amber-300 font-mono font-bold block truncate">${p.checkinTimestamp || 'Today'}</span>
+                  <span class="text-[8px] text-slate-300">Tap to expand ➔</span>
                 </div>
               </div>
-              <span class="text-[8px] font-mono text-slate-300 mt-0.5 truncate max-w-[44px]">Story ${idx + 1}</span>
             </div>
           `).join('');
 
           storySection = `
-            <div class="mt-2.5 space-y-2 pt-2 border-t border-white/5">
-              <div class="relative rounded-xl overflow-hidden cursor-pointer tap-effect shadow-md border border-white/10" onclick="openRideStoryLightbox('${card.id}', ${photos.length - 1})">
-                <img src="${featuredPhoto.dataUrl}" alt="Hero Story" class="w-full h-36 object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end justify-between p-2.5">
-                  <span class="text-[10px] font-mono font-bold text-amber-300 flex items-center gap-1">
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                    ${featuredPhoto.checkinTimestamp || 'Today'}
-                  </span>
-                  <span class="text-[10px] text-white font-semibold">Tap to view ➔</span>
-                </div>
+            <div class="mt-2.5 pt-2 border-t border-white/5 space-y-2">
+              <div class="flex items-center justify-between px-0.5">
+                <span class="text-[10px] font-mono text-amber-300 font-bold flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                  ${photos.length} Vertical Stor${photos.length > 1 ? 'ies' : 'y'}
+                </span>
+                <button onclick="triggerTimelineStoryCapture('${card.id}')" class="text-[10px] font-bold text-amber-300 hover:text-amber-200 flex items-center gap-1 tap-effect">
+                  <i class="ph-bold ph-plus-circle"></i> Add Story
+                </button>
               </div>
-              <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-                <div onclick="triggerTimelineStoryCapture('${card.id}')" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect">
-                  <div class="w-11 h-11 rounded-full border border-dashed border-amber-400/50 bg-amber-400/5 flex items-center justify-center">
-                    <i class="ph-bold ph-plus text-amber-300 text-sm"></i>
-                  </div>
-                  <span class="text-[8px] text-amber-400 font-semibold mt-0.5">Add</span>
-                </div>
-                ${storyBubbles}
+              <!-- 2-Columns Vertical Story Grid for Timeline Card -->
+              <div class="grid grid-cols-2 gap-2">
+                ${timelineStories}
               </div>
             </div>
           `;
