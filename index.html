@@ -1,0 +1,2536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Disneyland & DCA Rope Drop & LLMP Commander</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons for modern mobile UI -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Google Fonts: Outfit & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;850&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS & JS for Interactive Disney Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            display: ['"Outfit"', 'sans-serif'],
+          },
+          colors: {
+            disney: {
+              midnight: '#070913',
+              night: '#0d111e',
+              card: '#151b2e',
+              glow: '#3b82f6',
+              gold: '#fbbf24',
+              purple: '#8b5cf6'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --app-bg: #070913;
+    }
+    body {
+      background-color: var(--app-bg);
+      color: #f1f5f9;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .glass-nav {
+      background: rgba(13, 17, 30, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .glass-card {
+      background: rgba(21, 27, 46, 0.78);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .tap-effect:active {
+      transform: scale(0.97);
+      transition: transform 0.08s ease;
+    }
+    .pb-safe {
+      padding-bottom: calc(5.2rem + env(safe-area-inset-bottom, 16px));
+    }
+    .disney-gradient-text {
+      background: linear-gradient(135deg, #fbbf24 0%, #f472b6 50%, #60a5fa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .magic-ring {
+      background: linear-gradient(135deg, #8b5cf6, #ec4899, #fbbf24);
+    }
+    .llmp-glow {
+      box-shadow: 0 0 25px rgba(251, 191, 36, 0.15);
+    }
+    /* Leaflet popup styling */
+    .leaflet-popup-content-wrapper {
+      background: rgba(13, 17, 30, 0.95);
+      backdrop-filter: blur(12px);
+      color: #f1f5f9;
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      border-radius: 14px;
+      padding: 4px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+    }
+    .leaflet-popup-tip {
+      background: rgba(13, 17, 30, 0.95);
+    }
+    .leaflet-popup-content {
+      margin: 8px 10px;
+      line-height: 1.4;
+    }
+    /* Instagram Story Gradient Rings & Story Cards */
+    .story-ring-gradient {
+      background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    }
+    .story-ring-gold {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b, #ec4899, #8b5cf6);
+    }
+    .story-ring-cyan {
+      background: linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6);
+    }
+  </style>
+</head>
+<body class="font-sans antialiased text-slate-100 min-h-screen bg-disney-midnight selection:bg-amber-400/30">
+
+  <!-- ================= APP CONTAINER (MOBILE FRAME) ================= -->
+  <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col relative shadow-2xl bg-disney-night border-x border-white/5">
+
+    <!-- ================= STICKY MAGIC HEADER ================= -->
+    <header class="sticky top-0 z-40 glass-nav border-b border-white/10 px-4 pt-3 pb-2.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl magic-ring p-[2px] flex items-center justify-center shadow-lg shadow-purple-500/25">
+            <div class="w-full h-full bg-disney-night rounded-[10px] flex items-center justify-center text-amber-300">
+              <i class="ph-fill ph-castle text-lg"></i>
+            </div>
+          </div>
+          <div>
+            <h1 class="font-display font-extrabold text-sm tracking-tight text-white flex items-center gap-1.5 leading-none">
+              <span class="disney-gradient-text font-black">Disneyland & DCA</span>
+              <span class="text-cyan-300 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 font-mono font-bold border border-cyan-400/30">LLMP HQ</span>
+            </h1>
+            <p class="text-[11px] text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+              <span>Thursday Strategy</span> • <span class="text-emerald-400 font-semibold">No Guardians (Drop-Free)</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Anaheim PST Clock & Park Hopper Status -->
+        <div class="text-right flex flex-col items-end">
+          <div id="anaheimClock" class="font-mono text-xs font-bold text-amber-300 tracking-wider">--:-- PST</div>
+          <div id="hopperStatusBadge" class="text-[10px] text-emerald-400 font-semibold flex items-center justify-end gap-1 mt-0.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="hopperStatusText">Hop @ 11:00 AM</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Strategy Ticker / Rules Banner -->
+      <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-300">
+        <span class="flex items-center gap-1 text-slate-300">
+          <i class="ph-bold ph-alarm text-amber-400"></i> Turnstiles 7:20 AM
+        </span>
+        <button onclick="switchTab('rides')" class="flex items-center gap-1 text-cyan-300 font-semibold tap-effect hover:underline">
+          <i class="ph-bold ph-ticket text-cyan-400"></i> <span id="headerRideCount">0 / 48 Rides</span>
+        </button>
+        <button onclick="switchTab('llmp')" class="flex items-center gap-1 text-amber-400 font-bold tap-effect hover:underline">
+          <i class="ph-bold ph-lightning"></i> <span>2-Hr Rule</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ================= MAIN SCROLLABLE VIEWPORT ================= -->
+    <main class="flex-1 px-4 pt-3 pb-safe overflow-y-auto">
+
+      <!-- ================= TAB 0: ALL RIDES CHECK-OFF & INSTAGRAM STORIES TRACKER ================= -->
+      <section id="view-rides" class="tab-view hidden space-y-3.5">
+        
+        <!-- Live Ride Progress Dashboard -->
+        <div class="glass-card rounded-2xl p-3.5 border-cyan-500/30 bg-gradient-to-br from-cyan-950/40 via-disney-card to-purple-950/30 space-y-2.5 shadow-xl">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-purple-500 flex items-center justify-center text-disney-midnight font-black shadow-md shadow-cyan-500/20">
+                <i class="ph-bold ph-ticket text-base"></i>
+              </div>
+              <div>
+                <h2 class="text-sm font-extrabold text-white flex items-center gap-1.5">
+                  Rides Conquered Today
+                </h2>
+                <p class="text-[10px] text-slate-400">Tap checkmark when ridden • Add Instagram stories</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span id="ridesProgressStat" class="font-display font-black text-xl text-amber-300">0 / 48</span>
+              <span class="block text-[9px] font-mono text-cyan-300 uppercase font-bold" id="ridesPctStat">0% Completed</span>
+            </div>
+          </div>
+
+          <!-- Park Breakdown Pills -->
+          <div class="grid grid-cols-2 gap-2 pt-1 border-t border-white/10 text-xs">
+            <div class="bg-disney-midnight/60 rounded-xl p-2 border border-amber-400/20 flex items-center justify-between">
+              <span class="text-slate-300 font-semibold flex items-center gap-1">
+                🏰 Disneyland
+              </span>
+              <span id="dlRidesStat" class="font-mono font-bold text-amber-400 text-xs">0 / 30</span>
+            </div>
+            <div class="bg-disney-midnight/60 rounded-xl p-2 border border-cyan-400/20 flex items-center justify-between">
+              <span class="text-slate-300 font-semibold flex items-center gap-1">
+                🎡 DCA
+              </span>
+              <span id="dcaRidesStat" class="font-mono font-bold text-cyan-400 text-xs">0 / 18</span>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+            <div id="allRidesProgressBar" class="bg-gradient-to-r from-cyan-400 via-purple-400 to-amber-400 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Skip Guardians Notice / Smooth Alternative Callout -->
+        <div class="glass-card rounded-2xl p-3 border-emerald-500/30 bg-emerald-950/20 flex items-center justify-between gap-2.5">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold flex-shrink-0">
+              <i class="ph-bold ph-heart-straight text-sm"></i>
+            </div>
+            <div class="text-xs">
+              <strong class="text-white">Guardians Skipped (No Drop Anxiety!)</strong>
+              <p class="text-[10px] text-slate-300 leading-tight">Swapped for <span class="text-cyan-300 font-semibold">WEB SLINGERS</span>, <span class="text-cyan-300 font-semibold">Soarin'</span>, & <span class="text-cyan-300 font-semibold">Toy Story Mania</span>.</p>
+            </div>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold border border-emerald-400/30 flex-shrink-0">Comfort Mode</span>
+        </div>
+
+        <!-- Filter & Search Controls -->
+        <div class="space-y-2">
+          <!-- Park Selection Filter -->
+          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs">
+            <button onclick="filterRidesPark('all')" id="ride-filter-all" class="ride-park-pill tap-effect flex-shrink-0 px-3 py-1.5 rounded-xl font-bold bg-amber-400 text-disney-midnight shadow-md shadow-amber-500/20">
+              All Parks (48)
+            </button>
+            <button onclick="filterRidesPark('dl')" id="ride-filter-dl" class="ride-park-pill tap-effect flex-shrink-0 px-3 py-1.5 rounded-xl font-semibold bg-disney-card text-slate-300 border border-white/10">
+              🏰 Disneyland (30)
+            </button>
+            <button onclick="filterRidesPark('dca')" id="ride-filter-dca" class="ride-park-pill tap-effect flex-shrink-0 px-3 py-1.5 rounded-xl font-semibold bg-disney-card text-slate-300 border border-white/10">
+              🎡 DCA (18)
+            </button>
+            <button onclick="filterRidesPark('ridden')" id="ride-filter-ridden" class="ride-park-pill tap-effect flex-shrink-0 px-3 py-1.5 rounded-xl font-semibold bg-disney-card text-slate-300 border border-white/10 flex items-center gap-1">
+              <i class="ph-bold ph-check text-emerald-400"></i> Done Only
+            </button>
+          </div>
+
+          <!-- Search & Land Dropdown Filter -->
+          <div class="grid grid-cols-12 gap-2">
+            <div class="col-span-7 relative">
+              <i class="ph-bold ph-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+              <input type="text" id="rideSearchInput" oninput="handleRideSearch(this.value)" placeholder="Search any ride..." class="w-full bg-disney-card border border-white/10 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:border-cyan-400 outline-none">
+            </div>
+            <div class="col-span-5">
+              <select id="rideLandSelect" onchange="handleRideLandFilter(this.value)" class="w-full bg-disney-card border border-white/10 rounded-xl px-2 py-2 text-xs text-white focus:border-cyan-400 outline-none">
+                <option value="all">All Lands</option>
+                <optgroup label="Disneyland Lands">
+                  <option value="Tomorrowland">Tomorrowland</option>
+                  <option value="Adventureland">Adventureland</option>
+                  <option value="Fantasyland">Fantasyland</option>
+                  <option value="Frontierland">Frontierland</option>
+                  <option value="New Orleans Square">New Orleans Square</option>
+                  <option value="Star Wars: Galaxy's Edge">Galaxy's Edge</option>
+                  <option value="Critter Country">Critter Country</option>
+                  <option value="Mickey's Toontown">Mickey's Toontown</option>
+                </optgroup>
+                <optgroup label="DCA Lands">
+                  <option value="Avengers Campus">Avengers Campus</option>
+                  <option value="Cars Land">Cars Land</option>
+                  <option value="Pixar Pier">Pixar Pier</option>
+                  <option value="Grizzly Peak">Grizzly Peak</option>
+                  <option value="Hollywood Land">Hollywood Land</option>
+                  <option value="Paradise Gardens Park">Paradise Gardens</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Master Rides List Container -->
+        <div id="allRidesListContainer" class="space-y-3">
+          <!-- Dynamically generated with categorized lands & story avatars -->
+        </div>
+
+      </section>
+
+      <!-- ================= TAB 1: MASTER TIMELINE & ROPE DROP ================= -->
+      <section id="view-timeline" class="tab-view block space-y-3.5">
+        
+        <!-- Park Phase Switcher Pills -->
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <button onclick="switchPhase('all')" id="pill-all" class="phase-pill tap-effect flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-amber-400 text-disney-midnight shadow-md shadow-amber-500/20">
+            Full Day Plan
+          </button>
+          <button onclick="switchPhase('dl-morning')" id="pill-dl-morning" class="phase-pill tap-effect flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all bg-disney-card text-slate-300 border border-white/10 hover:border-white/20">
+            🏰 DL Rope Drop
+          </button>
+          <button onclick="switchPhase('dca-midday')" id="pill-dca-midday" class="phase-pill tap-effect flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all bg-disney-card text-slate-300 border border-white/10 hover:border-white/20">
+            🎡 DCA Hopper (11 AM)
+          </button>
+          <button onclick="switchPhase('dl-night')" id="pill-dl-night" class="phase-pill tap-effect flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all bg-disney-card text-slate-300 border border-white/10 hover:border-white/20">
+            🎆 DL Fireworks & Rise
+          </button>
+        </div>
+
+        <!-- Progress Card -->
+        <div class="glass-card rounded-2xl p-3 flex items-center justify-between border-amber-400/20">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-400 font-bold">
+              <i class="ph-bold ph-check-square-offset text-base"></i>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                Missions Accomplished: <span id="progressStopsText" class="text-amber-400 font-mono text-[11px]">0 / 0</span>
+              </div>
+              <div class="w-36 bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
+                <div id="stopsProgressBar" class="bg-gradient-to-r from-amber-400 via-purple-400 to-cyan-400 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="openCardModal()" class="text-[11px] font-bold text-disney-midnight bg-gradient-to-r from-amber-400 to-amber-300 hover:brightness-110 px-3 py-1.5 rounded-xl tap-effect flex items-center gap-1 shadow-md shadow-amber-400/20">
+              <i class="ph-bold ph-plus-circle text-sm"></i> Add Stop
+            </button>
+            <button onclick="switchTab('llmp')" class="text-[10px] font-bold text-purple-300 bg-purple-500/15 border border-purple-400/30 px-2.5 py-1.5 rounded-xl tap-effect flex items-center gap-1">
+              <i class="ph-bold ph-lightning"></i> LLMP
+            </button>
+          </div>
+        </div>
+
+        <!-- Strategy Hero Callout -->
+        <div class="glass-card rounded-2xl p-3.5 border-purple-500/30 bg-gradient-to-br from-purple-900/30 to-blue-900/20 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1">
+              <i class="ph-bold ph-fire text-amber-400"></i> Thursday Golden Rule
+            </span>
+            <span class="text-[10px] font-mono text-cyan-300 bg-cyan-950/70 px-2 py-0.5 rounded border border-cyan-500/30">Zero Wait Priority</span>
+          </div>
+          <p class="text-xs text-slate-200 leading-relaxed">
+            Scan your park ticket into Disneyland at <strong class="text-white">7:25 AM</strong>. The instant your barcode beeps at the turnstile, open the Disneyland app to book your <strong class="text-amber-300">1st Lightning Lane Multi Pass</strong> (grab Indiana Jones or Space Mountain for mid-morning), then brisk walk to the rope for Standby drop!
+          </p>
+        </div>
+
+        <!-- Dynamic Container for Active Day's Itinerary Cards -->
+        <div id="timelineContainer" class="space-y-3">
+          <!-- Dynamically populated from JS -->
+        </div>
+      </section>
+
+      <!-- ================= TAB 2: LIGHTNING LANE MULTI PASS TRACKER ================= -->
+      <section id="view-llmp" class="tab-view hidden space-y-4">
+        <div class="px-1 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+              <i class="ph-fill ph-lightning text-amber-400 text-lg"></i> LLMP Control Deck
+            </h2>
+            <p class="text-xs text-slate-400">Live multi-pass simulator & 2-Hour rule countdown</p>
+          </div>
+          <button onclick="resetSimulatedLLMP()" class="tap-effect text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-white/10 hover:border-amber-400/40 flex items-center gap-1 font-semibold">
+            <i class="ph-bold ph-arrow-counter-clockwise"></i> Reset Passes
+          </button>
+        </div>
+
+        <!-- Visual Cheat Sheet: The 2 Core Rules -->
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="glass-card p-2.5 rounded-2xl border-cyan-500/30 bg-cyan-950/20">
+            <div class="text-[11px] font-bold text-cyan-300 flex items-center gap-1">
+              <i class="ph-bold ph-scan"></i> Rule 1: Tap & Pull
+            </div>
+            <p class="text-[10px] text-slate-300 mt-1 leading-normal">
+              As soon as your group taps the Lightning Lane touchpoint at the ride queue, your next reservation slot opens <strong class="text-white">instantly</strong>.
+            </p>
+          </div>
+          <div class="glass-card p-2.5 rounded-2xl border-purple-500/30 bg-purple-950/20">
+            <div class="text-[11px] font-bold text-purple-300 flex items-center gap-1">
+              <i class="ph-bold ph-hourglass"></i> Rule 2: 2-Hour Clock
+            </div>
+            <p class="text-[10px] text-slate-300 mt-1 leading-normal">
+              If your return time is >2 hours away, you can pull your next pass exactly <strong class="text-white">120 minutes</strong> from booking time or park open (10:00 AM).
+            </p>
+          </div>
+        </div>
+
+        <!-- Next LL Pull Countdown Card -->
+        <div class="glass-card rounded-2xl p-4 border-amber-400/30 relative overflow-hidden llmp-glow">
+          <div class="absolute -right-6 -bottom-6 text-amber-400/10 text-8xl pointer-events-none">
+            <i class="ph-fill ph-lightning"></i>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+              Next LL Slot Eligible
+            </span>
+            <span id="nextPullTimeLabel" class="text-xs font-mono font-bold text-cyan-300">Now Available!</span>
+          </div>
+          <div class="mt-2">
+            <div id="llmpCountdownText" class="font-display font-extrabold text-2xl text-white tracking-tight">READY TO BOOK</div>
+            <p id="llmpStatusSubtext" class="text-xs text-slate-300 mt-0.5">
+              Book your next headliner attraction below to activate the automatic timer.
+            </p>
+          </div>
+          <div class="mt-3 flex items-center gap-2">
+            <button onclick="openBookLLModal()" class="flex-1 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-300 text-disney-midnight font-bold text-xs tap-effect shadow-md shadow-amber-400/20 flex items-center justify-center gap-1.5">
+              <i class="ph-bold ph-plus-circle text-sm"></i> Simulate Booking LLMP
+            </button>
+            <button onclick="setSimulatedNow()" class="px-3 py-2 rounded-xl bg-slate-800 border border-white/10 text-xs text-slate-300 tap-effect font-medium">
+              Unlock Now
+            </button>
+          </div>
+        </div>
+
+        <!-- Active Reserved Lightning Lanes -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between px-1">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Active Lightning Lane Holding</h3>
+            <span id="activeLLCount" class="text-[11px] font-mono text-purple-400 font-semibold">0 passes held</span>
+          </div>
+          <div id="activeLLContainer" class="space-y-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Priority Tier Lists for Thursday -->
+        <div class="space-y-3 pt-2">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-amber-400 px-1 flex items-center gap-1.5">
+            <i class="ph-bold ph-crown text-sm"></i> LLMP Priority Hierarchy
+          </h3>
+
+          <!-- Disneyland Tiers -->
+          <div class="glass-card rounded-2xl p-3.5 space-y-2">
+            <div class="flex items-center justify-between border-b border-white/10 pb-2">
+              <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                🏰 Disneyland Priority Tiers
+              </h4>
+              <span class="text-[10px] text-amber-300 font-mono">Book Early</span>
+            </div>
+            <div class="space-y-1.5 text-xs">
+              <div class="flex items-start gap-2">
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono">Tier 1</span>
+                <div>
+                  <strong class="text-white">Space Mountain & Indiana Jones Adventure:</strong>
+                  <p class="text-[11px] text-slate-400">Return slots push into afternoon very fast. Book Indy or Space 1st at 7:35 AM.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono">Tier 2</span>
+                <div>
+                  <strong class="text-white">Matterhorn Bobsleds & Big Thunder Mountain:</strong>
+                  <p class="text-[11px] text-slate-400">Matterhorn breaks down occasionally; Big Thunder has high capacity, quick turnaround.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">Tier 3</span>
+                <div>
+                  <strong class="text-white">Pirates of the Caribbean (Standby only), Haunted Mansion:</strong>
+                  <p class="text-[11px] text-slate-400">Note: Pirates has NO Lightning Lane (rope drop standby!). HM uses virtual queue/LL when open.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DCA Tiers -->
+          <div class="glass-card rounded-2xl p-3.5 space-y-2">
+            <div class="flex items-center justify-between border-b border-white/10 pb-2">
+              <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                🎡 DCA Priority Tiers
+              </h4>
+              <span class="text-[10px] text-cyan-300 font-mono">Stack for 11 AM</span>
+            </div>
+            <div class="space-y-1.5 text-xs">
+              <div class="flex items-start gap-2">
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono">Tier 1</span>
+                <div>
+                  <strong class="text-white">Guardians of the Galaxy: Mission BREAKOUT!</strong>
+                  <p class="text-[11px] text-slate-400">Highest DCA demand. Book for 11:30 AM – 1:00 PM while sitting in Disneyland.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono">Tier 2</span>
+                <div>
+                  <strong class="text-white">Soarin' Around the World & Incredicoaster:</strong>
+                  <p class="text-[11px] text-slate-400">Great afternoon fillers. Single Rider is also extremely rapid for Incredicoaster.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">Single Pass</span>
+                <div>
+                  <strong class="text-white">Radiator Springs Racers ($21-$26 Single Pass):</strong>
+                  <p class="text-[11px] text-slate-400">NOT included in Multi Pass! Use Single Rider line (usually ~15 mins) to save money.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 3: TOP FOOD & MOBILE ORDERS ================= -->
+      <section id="view-food" class="tab-view hidden space-y-3.5">
+        <div class="px-1 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+              <i class="ph-fill ph-fork-knife text-amber-400 text-lg"></i> Park Food & Quick Service
+            </h2>
+            <p class="text-xs text-slate-400">Target mobile order timing & photo check-ins</p>
+          </div>
+          <button onclick="resetAllDiningPhotos()" class="tap-effect text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-white/10 hover:border-amber-400/40 flex items-center gap-1 font-semibold">
+            <i class="ph-bold ph-arrow-counter-clockwise"></i> Reset
+          </button>
+        </div>
+
+        <!-- Food items list -->
+        <div id="foodCardsList" class="space-y-3">
+          <!-- Food Spot 1 -->
+          <div class="glass-card rounded-2xl overflow-hidden border-white/10" data-food-id="jolly-holiday">
+            <div class="relative group">
+              <img id="img-jolly-holiday" src="https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=700&q=80" onclick="previewFoodPhoto('jolly-holiday', 'Jolly Holiday Bakery Cafe')" class="w-full h-40 object-cover cursor-pointer tap-effect" alt="Jolly Holiday">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent pointer-events-none"></div>
+              <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-auto">
+                <span id="badge-jolly-holiday" class="hidden text-[10px] font-mono font-bold text-emerald-300 bg-emerald-500/30 border border-emerald-400/40 px-2 py-0.5 rounded-full backdrop-blur-md">
+                  <i class="ph-bold ph-check"></i> Photo Captured
+                </span>
+                <button onclick="triggerFoodPhotoUpload('jolly-holiday')" class="tap-effect ml-auto text-[11px] font-bold text-disney-midnight bg-gradient-to-r from-amber-400 to-amber-300 px-3 py-1 rounded-xl shadow-lg flex items-center gap-1">
+                  <i class="ph-bold ph-camera"></i> Snap Dish
+                </button>
+              </div>
+            </div>
+            <div class="p-3.5 space-y-2">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white">Jolly Holiday Bakery Cafe</h3>
+                <span class="text-xs font-mono text-amber-400 font-semibold">DL Main St Hub</span>
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                <strong class="text-amber-200">Must Get:</strong> Beef Birria Toasted Cheese Sandwich with consommé soup for dipping & Raspberry Rose Mickey Macaron. Mobile order early for a 10:30 AM brunch slot!
+              </p>
+              <div class="flex items-center justify-between pt-2 border-t border-white/5 text-[11px]">
+                <button onclick="flyToMapStop('jollyholiday')" class="text-amber-400 font-semibold hover:underline flex items-center gap-1 tap-effect">
+                  <i class="ph-bold ph-map-pin"></i> View on Map
+                </button>
+                <a href="https://disneyland.disney.go.com/dining/disneyland/jolly-holiday-bakery-cafe/" target="_blank" class="text-cyan-400 hover:text-white flex items-center gap-1">
+                  Mobile Order <i class="ph-bold ph-arrow-up-right"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Food Spot 2 -->
+          <div class="glass-card rounded-2xl overflow-hidden border-white/10" data-food-id="pym-test">
+            <div class="relative group">
+              <img id="img-pym-test" src="https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=700&q=80" onclick="previewFoodPhoto('pym-test', 'Pym Test Kitchen (Avengers Campus)')" class="w-full h-40 object-cover cursor-pointer tap-effect" alt="Pym Test Kitchen">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent pointer-events-none"></div>
+              <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-auto">
+                <span id="badge-pym-test" class="hidden text-[10px] font-mono font-bold text-emerald-300 bg-emerald-500/30 border border-emerald-400/40 px-2 py-0.5 rounded-full backdrop-blur-md">
+                  <i class="ph-bold ph-check"></i> Photo Captured
+                </span>
+                <button onclick="triggerFoodPhotoUpload('pym-test')" class="tap-effect ml-auto text-[11px] font-bold text-disney-midnight bg-gradient-to-r from-amber-400 to-amber-300 px-3 py-1 rounded-xl shadow-lg flex items-center gap-1">
+                  <i class="ph-bold ph-camera"></i> Snap Dish
+                </button>
+              </div>
+            </div>
+            <div class="p-3.5 space-y-2">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white">Pym Test Kitchen (Avengers Campus)</h3>
+                <span class="text-xs font-mono text-cyan-400 font-semibold">DCA 1:30 PM Lunch</span>
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                <strong class="text-cyan-200">Must Get:</strong> Quantum Pretzel with sharp cheddar craft beer cheese sauce & Not So Little Chicken Sandwich. Air-conditioned indoor seating.
+              </p>
+              <div class="flex items-center justify-between pt-2 border-t border-white/5 text-[11px]">
+                <button onclick="flyToMapStop('pymtest')" class="text-amber-400 font-semibold hover:underline flex items-center gap-1 tap-effect">
+                  <i class="ph-bold ph-map-pin"></i> View on Map
+                </button>
+                <a href="https://disneyland.disney.go.com/dining/disney-california-adventure/pym-test-kitchen/" target="_blank" class="text-cyan-400 hover:text-white flex items-center gap-1">
+                  Mobile Order <i class="ph-bold ph-arrow-up-right"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Food Spot 3 -->
+          <div class="glass-card rounded-2xl overflow-hidden border-white/10" data-food-id="cozy-cone">
+            <div class="relative group">
+              <img id="img-cozy-cone" src="https://images.unsplash.com/photo-1579954115545-a95591f28bfc?auto=format&fit=crop&w=700&q=80" onclick="previewFoodPhoto('cozy-cone', 'Cozy Cone Motel (Cars Land)')" class="w-full h-40 object-cover cursor-pointer tap-effect" alt="Cozy Cone">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent pointer-events-none"></div>
+              <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-auto">
+                <span id="badge-cozy-cone" class="hidden text-[10px] font-mono font-bold text-emerald-300 bg-emerald-500/30 border border-emerald-400/40 px-2 py-0.5 rounded-full backdrop-blur-md">
+                  <i class="ph-bold ph-check"></i> Photo Captured
+                </span>
+                <button onclick="triggerFoodPhotoUpload('cozy-cone')" class="tap-effect ml-auto text-[11px] font-bold text-disney-midnight bg-gradient-to-r from-amber-400 to-amber-300 px-3 py-1 rounded-xl shadow-lg flex items-center gap-1">
+                  <i class="ph-bold ph-camera"></i> Snap Dish
+                </button>
+              </div>
+            </div>
+            <div class="p-3.5 space-y-2">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white">Cozy Cone Motel (Cars Land)</h3>
+                <span class="text-xs font-mono text-amber-400 font-semibold">DCA Snack</span>
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                <strong class="text-amber-200">Must Get:</strong> Chili Cone Queso (beef chili & cheddar in bread cone) at Cone #3, and warm churro bites with chocolate sauce at Cone #1.
+              </p>
+              <div class="flex items-center justify-between pt-2 border-t border-white/5 text-[11px]">
+                <button onclick="flyToMapStop('cozycone')" class="text-amber-400 font-semibold hover:underline flex items-center gap-1 tap-effect">
+                  <i class="ph-bold ph-map-pin"></i> View on Map
+                </button>
+                <a href="https://disneyland.disney.go.com/dining/disney-california-adventure/cozy-cone-motel/" target="_blank" class="text-cyan-400 hover:text-white flex items-center gap-1">
+                  Directions <i class="ph-bold ph-arrow-up-right"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Food Spot 4 -->
+          <div class="glass-card rounded-2xl overflow-hidden border-white/10" data-food-id="bengal-bbq">
+            <div class="relative group">
+              <img id="img-bengal-bbq" src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=80" onclick="previewFoodPhoto('bengal-bbq', 'Bengal Barbecue (Adventureland)')" class="w-full h-40 object-cover cursor-pointer tap-effect" alt="Bengal Barbecue">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent pointer-events-none"></div>
+              <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-auto">
+                <span id="badge-bengal-bbq" class="hidden text-[10px] font-mono font-bold text-emerald-300 bg-emerald-500/30 border border-emerald-400/40 px-2 py-0.5 rounded-full backdrop-blur-md">
+                  <i class="ph-bold ph-check"></i> Photo Captured
+                </span>
+                <button onclick="triggerFoodPhotoUpload('bengal-bbq')" class="tap-effect ml-auto text-[11px] font-bold text-disney-midnight bg-gradient-to-r from-amber-400 to-amber-300 px-3 py-1 rounded-xl shadow-lg flex items-center gap-1">
+                  <i class="ph-bold ph-camera"></i> Snap Dish
+                </button>
+              </div>
+            </div>
+            <div class="p-3.5 space-y-2">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white">Bengal Barbecue (Adventureland)</h3>
+                <span class="text-xs font-mono text-purple-400 font-semibold">DL Night Fuel</span>
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                <strong class="text-purple-200">Must Get:</strong> Banyan Beef Skewer (hot and spicy) and Safari Skewer (bacon-wrapped asparagus). Right across from Indiana Jones queue.
+              </p>
+              <div class="flex items-center justify-between pt-2 border-t border-white/5 text-[11px]">
+                <button onclick="flyToMapStop('bengalbbq')" class="text-amber-400 font-semibold hover:underline flex items-center gap-1 tap-effect">
+                  <i class="ph-bold ph-map-pin"></i> View on Map
+                </button>
+                <a href="https://disneyland.disney.go.com/dining/disneyland/bengal-barbecue/" target="_blank" class="text-cyan-400 hover:text-white flex items-center gap-1">
+                  Mobile Order <i class="ph-bold ph-arrow-up-right"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 4: INTERACTIVE DISNEY RESORT MAP ================= -->
+      <section id="view-map" class="tab-view hidden space-y-3">
+        <div class="px-1 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+              <i class="ph-fill ph-map-trifold text-amber-400 text-lg"></i> Resort GPS Map
+            </h2>
+            <p class="text-xs text-slate-400">Headliners & mobile order pins across DL & DCA</p>
+          </div>
+          <button onclick="resetResortMap()" class="tap-effect text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-white/10 flex items-center gap-1 font-semibold">
+            <i class="ph-bold ph-arrows-out"></i> Center Both Parks
+          </button>
+        </div>
+
+        <!-- Layer toggle / open in Google Maps -->
+        <div class="glass-card rounded-2xl p-2.5 flex items-center justify-between gap-2 border border-white/10">
+          <div class="flex items-center gap-1 bg-disney-midnight p-1 rounded-xl border border-white/10 text-xs">
+            <button id="btn-map-roadmap" onclick="setMapLayer('roadmap')" class="px-2.5 py-1 rounded-lg font-bold bg-amber-400 text-disney-midnight tap-effect transition-all flex items-center gap-1">
+              <i class="ph-bold ph-map-pin"></i> Vector
+            </button>
+            <button id="btn-map-satellite" onclick="setMapLayer('satellite')" class="px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white tap-effect transition-all flex items-center gap-1">
+              <i class="ph-bold ph-planet text-cyan-400"></i> Satellite
+            </button>
+          </div>
+          <a id="btn-open-google-maps" href="https://www.google.com/maps/search/Disneyland+Resort+Anaheim" target="_blank" class="tap-effect text-[11px] px-3 py-1.5 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 font-bold flex items-center gap-1 hover:bg-purple-500/30">
+            <i class="ph-bold ph-arrow-square-out text-sm"></i>
+            <span>Open in App</span>
+          </a>
+        </div>
+
+        <!-- Filter Chips -->
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs">
+          <button onclick="filterMapCategory('all')" id="map-chip-all" class="map-chip tap-effect flex-shrink-0 px-3 py-1 rounded-xl font-bold bg-amber-400 text-disney-midnight">
+            All (16)
+          </button>
+          <button onclick="filterMapCategory('dl')" id="map-chip-dl" class="map-chip tap-effect flex-shrink-0 px-3 py-1 rounded-xl font-semibold bg-disney-card text-slate-300 border border-white/10">
+            🏰 Disneyland
+          </button>
+          <button onclick="filterMapCategory('dca')" id="map-chip-dca" class="map-chip tap-effect flex-shrink-0 px-3 py-1 rounded-xl font-semibold bg-disney-card text-slate-300 border border-white/10">
+            🎡 DCA
+          </button>
+          <button onclick="filterMapCategory('food')" id="map-chip-food" class="map-chip tap-effect flex-shrink-0 px-3 py-1 rounded-xl font-semibold bg-disney-card text-slate-300 border border-white/10">
+            🍔 Food & Snack
+          </button>
+        </div>
+
+        <!-- Leaflet Map Container -->
+        <div class="glass-card rounded-2xl overflow-hidden border-white/15 p-1 relative shadow-2xl">
+          <div id="disneyLeafletMap" style="height: 380px; width: 100%; border-radius: 12px; z-index: 10;"></div>
+          <!-- Floating Legend -->
+          <div class="absolute bottom-3 left-3 z-20 glass-card px-2.5 py-1 rounded-lg border border-white/10 text-[10px] flex items-center gap-2 text-slate-300 pointer-events-none">
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> DL Headliners</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyan-400"></span> DCA Headliners</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-400"></span> Food</span>
+          </div>
+        </div>
+
+        <!-- Quick Destination Cards below map -->
+        <div class="space-y-2 pt-1">
+          <h3 class="text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Tap to Focus Attraction</h3>
+          <div class="grid grid-cols-2 gap-2 text-left">
+            <button onclick="flyToMapStop('spacemtn')" class="tap-effect glass-card p-2.5 rounded-xl border-white/10 text-left hover:border-amber-400/40">
+              <div class="text-xs font-bold text-white truncate flex items-center gap-1"><i class="ph-bold ph-rocket-launch text-amber-400"></i> Space Mountain</div>
+              <div class="text-[10px] text-slate-400">Tomorrowland (Rope Drop)</div>
+            </button>
+            <button onclick="flyToMapStop('indy')" class="tap-effect glass-card p-2.5 rounded-xl border-white/10 text-left hover:border-amber-400/40">
+              <div class="text-xs font-bold text-white truncate flex items-center gap-1"><i class="ph-bold ph-compass text-amber-400"></i> Indiana Jones</div>
+              <div class="text-[10px] text-slate-400">Adventureland (LLMP #1)</div>
+            </button>
+            <button onclick="flyToMapStop('guardians')" class="tap-effect glass-card p-2.5 rounded-xl border-white/10 text-left hover:border-cyan-400/40">
+              <div class="text-xs font-bold text-white truncate flex items-center gap-1"><i class="ph-bold ph-skull text-cyan-400"></i> Guardians of Galaxy</div>
+              <div class="text-[10px] text-slate-400">Avengers Campus (DCA LL)</div>
+            </button>
+            <button onclick="flyToMapStop('carsracers')" class="tap-effect glass-card p-2.5 rounded-xl border-white/10 text-left hover:border-cyan-400/40">
+              <div class="text-xs font-bold text-white truncate flex items-center gap-1"><i class="ph-bold ph-car text-cyan-400"></i> Radiator Springs</div>
+              <div class="text-[10px] text-slate-400">Cars Land (Single Rider)</div>
+            </button>
+            <button onclick="flyToMapStop('rise')" class="tap-effect glass-card p-2.5 rounded-xl border-white/10 text-left hover:border-purple-400/40">
+              <div class="text-xs font-bold text-white truncate flex items-center gap-1"><i class="ph-bold ph-sword text-purple-400"></i> Rise of Resistance</div>
+              <div class="text-[10px] text-slate-400">Star Wars: Galaxy's Edge</div>
+            </button>
+            <button onclick="flyToMapStop('incredicoaster')" class="tap-effect glass-card p-2.5 rounded-xl border-white/10 text-left hover:border-cyan-400/40">
+              <div class="text-xs font-bold text-white truncate flex items-center gap-1"><i class="ph-bold ph-circle-dashed text-cyan-400"></i> Incredicoaster</div>
+              <div class="text-[10px] text-slate-400">Pixar Pier (DCA)</div>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 5: PHOTO SCRAPBOOK & MEMORIES ================= -->
+      <section id="view-album" class="tab-view hidden space-y-3.5">
+        <div class="px-1 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+              <i class="ph-fill ph-book-open text-amber-400 text-lg"></i> Disney Memories
+            </h2>
+            <p class="text-xs text-slate-400">Live photo check-ins across Disneyland & DCA</p>
+          </div>
+          <button onclick="clearAllAlbumPhotos()" class="tap-effect text-[11px] px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 font-semibold">
+            Clear Album
+          </button>
+        </div>
+
+        <!-- Album Stats -->
+        <div class="glass-card rounded-2xl p-3.5 flex items-center justify-around text-center">
+          <div>
+            <div id="albumCountStat" class="font-display font-extrabold text-xl text-amber-400">0</div>
+            <div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Photos Captured</div>
+          </div>
+          <div class="w-px h-8 bg-white/10"></div>
+          <div>
+            <div id="albumRemainingStat" class="font-display font-extrabold text-xl text-slate-200">12</div>
+            <div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Rides Remaining</div>
+          </div>
+          <div class="w-px h-8 bg-white/10"></div>
+          <div>
+            <div id="albumStorageStat" class="font-display font-extrabold text-xl text-cyan-400 font-mono">0 KB</div>
+            <div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Local Storage</div>
+          </div>
+        </div>
+
+        <!-- Grid of photos -->
+        <div id="albumGrid" class="grid grid-cols-2 gap-2.5">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Empty state placeholder -->
+        <div id="albumEmptyState" class="glass-card rounded-2xl p-8 text-center space-y-2.5">
+          <div class="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-400 mx-auto text-2xl">
+            <i class="ph-bold ph-camera"></i>
+          </div>
+          <h3 class="text-sm font-bold text-white">No Disney Memories Snapped Yet</h3>
+          <p class="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
+            Switch to the <strong>Plan</strong> or <strong>Dining</strong> tabs and tap <em>"📸 Snap Photo"</em> on any stop to start building your scrapbook!
+          </p>
+          <button onclick="switchTab('timeline')" class="mt-2 tap-effect text-xs px-3.5 py-1.5 rounded-xl bg-amber-400 text-disney-midnight font-bold">
+            Back to Timeline
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ================= NATIVE FIXED BOTTOM DOCK ================= -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-40 glass-nav border-t border-white/10 px-2 py-2 flex items-center justify-around">
+      <button onclick="switchTab('rides')" id="nav-rides" class="nav-btn tap-effect flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-white transition-colors relative">
+        <i class="ph-bold ph-ticket text-xl"></i>
+        <span class="text-[10px] font-semibold tracking-tight mt-0.5">Rides</span>
+        <span id="ridesBadge" class="hidden absolute top-0.5 right-1 w-2 h-2 rounded-full bg-cyan-400"></span>
+      </button>
+
+      <button onclick="switchTab('timeline')" id="nav-timeline" class="nav-btn tap-effect flex flex-col items-center justify-center py-1 px-2 rounded-xl text-amber-400 transition-colors">
+        <i class="ph-fill ph-calendar-check text-xl"></i>
+        <span class="text-[10px] font-semibold tracking-tight mt-0.5">Plan</span>
+      </button>
+
+      <button onclick="switchTab('llmp')" id="nav-llmp" class="nav-btn tap-effect flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-white transition-colors relative">
+        <i class="ph-bold ph-lightning text-xl"></i>
+        <span class="text-[10px] font-semibold tracking-tight mt-0.5">LLMP</span>
+        <span id="llmpActiveBadge" class="hidden absolute top-0.5 right-1.5 w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+      </button>
+
+      <button onclick="switchTab('food')" id="nav-food" class="nav-btn tap-effect flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-white transition-colors">
+        <i class="ph-bold ph-fork-knife text-xl"></i>
+        <span class="text-[10px] font-semibold tracking-tight mt-0.5">Dining</span>
+      </button>
+
+      <button onclick="switchTab('map')" id="nav-map" class="nav-btn tap-effect flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-white transition-colors">
+        <i class="ph-bold ph-map-trifold text-xl"></i>
+        <span class="text-[10px] font-semibold tracking-tight mt-0.5">Map</span>
+      </button>
+
+      <button onclick="switchTab('album')" id="nav-album" class="nav-btn tap-effect flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-white transition-colors relative">
+        <i class="ph-bold ph-images text-xl"></i>
+        <span class="text-[10px] font-semibold tracking-tight mt-0.5">Stories</span>
+        <span id="albumBadge" class="hidden absolute top-0.5 right-2 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-disney-midnight"></span>
+      </button>
+    </nav>
+
+    <!-- ================= FULLSCREEN INSTAGRAM STORY LIGHTBOX PREVIEW ================= -->
+    <div id="photoLightboxModal" class="hidden fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4" onclick="closeLightbox(event)">
+      <!-- Top Story Bar -->
+      <div class="space-y-2 pt-1" onclick="event.stopPropagation()">
+        <!-- Progress Segment Indicators (Instagram Story Style) -->
+        <div id="storyProgressBars" class="flex items-center gap-1.5 w-full">
+          <div class="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
+            <div class="h-full bg-white rounded-full w-full"></div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-white">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full story-ring-gradient p-[2px]">
+              <div class="w-full h-full bg-disney-midnight rounded-full flex items-center justify-center text-amber-300">
+                <i class="ph-bold ph-camera text-sm"></i>
+              </div>
+            </div>
+            <div>
+              <h4 id="lightboxTitle" class="text-sm font-bold truncate max-w-[200px]">Disney Check-In</h4>
+              <p id="lightboxTime" class="text-[11px] text-amber-300 font-mono">Timestamp</p>
+            </div>
+          </div>
+          <button onclick="closeLightbox(null, true)" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white tap-effect">
+            <i class="ph-bold ph-x text-base"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Photo Viewport -->
+      <div class="flex-1 flex items-center justify-center py-3 relative">
+        <img id="lightboxImage" src="" alt="Full view" class="max-w-full max-h-[70vh] rounded-2xl object-contain shadow-2xl border border-white/10">
+
+        <!-- Prev / Next Tapping Zones -->
+        <button id="lightboxPrevBtn" onclick="prevLightboxStory(event)" class="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center border border-white/20 tap-effect">
+          <i class="ph-bold ph-caret-left text-lg"></i>
+        </button>
+        <button id="lightboxNextBtn" onclick="nextLightboxStory(event)" class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center border border-white/20 tap-effect">
+          <i class="ph-bold ph-caret-right text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Bottom Story Controls -->
+      <div class="space-y-2 pb-safe" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between px-2 text-xs text-slate-300 font-mono">
+          <span id="lightboxStoryCounter">Story 1 / 1</span>
+          <span class="text-emerald-400 font-bold flex items-center gap-1">
+            <i class="ph-bold ph-sparkle"></i> Memory Saved
+          </span>
+        </div>
+        <div class="flex items-center justify-between gap-3 pt-1">
+          <button id="lightboxDeleteBtn" class="flex-1 py-2.5 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold tap-effect flex items-center justify-center gap-1.5">
+            <i class="ph-bold ph-trash"></i> Delete This Story
+          </button>
+          <button onclick="closeLightbox(null, true)" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-white text-xs font-bold border border-white/10 tap-effect">
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL: ADD / EDIT TIMELINE STOP ================= -->
+    <div id="cardEditorModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4" onclick="closeCardModal(event)">
+      <div class="w-full max-w-md bg-disney-night border-t sm:border border-white/15 rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <h3 id="modalEditorTitle" class="text-base font-extrabold text-white flex items-center gap-2">
+            <i class="ph-bold ph-sparkle text-amber-400"></i> <span>Add New Disney Stop</span>
+          </h3>
+          <button onclick="closeCardModal(null, true)" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-300 tap-effect">
+            <i class="ph-bold ph-x"></i>
+          </button>
+        </div>
+
+        <form id="cardEditorForm" onsubmit="handleSaveCard(event)" class="space-y-3 text-xs">
+          <input type="hidden" id="editCardId" value="">
+
+          <!-- Phase Selector -->
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Park Hopper Phase</label>
+            <select id="editCardPhase" class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white font-medium focus:border-amber-400 outline-none">
+              <option value="dl-morning">🏰 Disneyland Morning Rope Drop (7:00 AM – 11:00 AM)</option>
+              <option value="dca-midday">🎡 DCA Park Hop & Marvel (11:00 AM – 6:30 PM)</option>
+              <option value="dl-night">🎆 Disneyland Evening, Fireworks & Galaxy's Edge (6:30 PM – Midnight)</option>
+            </select>
+          </div>
+
+          <!-- Time Inputs: Sortable 24h & Display Text -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-slate-400 font-semibold mb-1">Time (24h Sort)</label>
+              <input type="time" id="editCardSortTime" required class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white font-mono focus:border-amber-400 outline-none">
+            </div>
+            <div>
+              <label class="block text-slate-400 font-semibold mb-1">Display Label</label>
+              <input type="text" id="editCardTimeLabel" placeholder="e.g. 8:15 AM PST" required class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none">
+            </div>
+          </div>
+
+          <!-- Title -->
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Attraction or Event Name</label>
+            <input type="text" id="editCardTitle" placeholder="e.g. Big Thunder Mountain Railroad" required class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white font-bold focus:border-amber-400 outline-none">
+          </div>
+
+          <!-- Queue Strategy & Badge -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-slate-400 font-semibold mb-1">Strategy Type</label>
+              <select id="editCardCategory" class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none">
+                <option value="ropedrop">Rope Drop Sprint (Standby)</option>
+                <option value="llmp">Lightning Lane Multi Pass</option>
+                <option value="single">Single Rider / Single Pass</option>
+                <option value="food">Mobile Order / Meal</option>
+                <option value="show">Fireworks / Night Spectacular</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-400 font-semibold mb-1">Badge Tag</label>
+              <input type="text" id="editCardTag" placeholder="e.g. Standby Walk-On" class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none">
+            </div>
+          </div>
+
+          <!-- Description / Tips -->
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Queue Tips / LL Strategy</label>
+            <textarea id="editCardDesc" rows="2" placeholder="e.g. Walk through Frontierland castle bridge; ride before 9:30 AM to beat crowds..." class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none"></textarea>
+          </div>
+
+          <!-- Map Link -->
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Link to Map Pin (Optional)</label>
+            <select id="editCardMapStop" class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none">
+              <option value="">None</option>
+              <option value="spacemtn">Space Mountain (Disneyland)</option>
+              <option value="indy">Indiana Jones Adventure (Disneyland)</option>
+              <option value="bigthunder">Big Thunder Mountain (Disneyland)</option>
+              <option value="pirates">Pirates of the Caribbean (Disneyland)</option>
+              <option value="matterhorn">Matterhorn Bobsleds (Disneyland)</option>
+              <option value="rise">Rise of the Resistance (Disneyland)</option>
+              <option value="castle">Sleeping Beauty Castle (Disneyland)</option>
+              <option value="guardians">Guardians of the Galaxy (DCA)</option>
+              <option value="carsracers">Radiator Springs Racers (DCA)</option>
+              <option value="incredicoaster">Incredicoaster (DCA)</option>
+              <option value="soarin">Soarin' Around the World (DCA)</option>
+              <option value="toystory">Toy Story Midway Mania (DCA)</option>
+              <option value="webslingers">WEB SLINGERS (DCA)</option>
+              <option value="jollyholiday">Jolly Holiday Bakery</option>
+              <option value="pymtest">Pym Test Kitchen</option>
+              <option value="cozycone">Cozy Cone Motel</option>
+            </select>
+          </div>
+
+          <div class="pt-2 flex items-center gap-2">
+            <button type="submit" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-300 text-disney-midnight font-bold tap-effect shadow-md shadow-amber-400/20 text-xs">
+              Save & Sort Timeline
+            </button>
+            <button type="button" onclick="closeCardModal(null, true)" class="px-4 py-2.5 rounded-xl bg-disney-card border border-white/10 text-slate-300 font-semibold tap-effect text-xs">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ================= MODAL: SIMULATE BOOKING LLMP ================= -->
+    <div id="bookLLModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4" onclick="closeBookLLModal(event)">
+      <div class="w-full max-w-md bg-disney-night border-t sm:border border-white/15 rounded-t-3xl sm:rounded-2xl p-5 space-y-4" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+            <i class="ph-bold ph-lightning text-amber-400"></i> <span>Book Lightning Lane Pass</span>
+          </h3>
+          <button onclick="closeBookLLModal(null, true)" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-300 tap-effect">
+            <i class="ph-bold ph-x"></i>
+          </button>
+        </div>
+
+        <form onsubmit="handleConfirmBookLL(event)" class="space-y-3 text-xs">
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Select Attraction</label>
+            <select id="llmpSelectRide" class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2.5 text-white font-medium focus:border-purple-400 outline-none">
+              <optgroup label="🏰 Disneyland Multi Pass">
+                <option value="Space Mountain|DL">Space Mountain (Tier 1)</option>
+                <option value="Indiana Jones Adventure|DL">Indiana Jones Adventure (Tier 1)</option>
+                <option value="Matterhorn Bobsleds|DL">Matterhorn Bobsleds (Tier 2)</option>
+                <option value="Big Thunder Mountain|DL">Big Thunder Mountain Railroad (Tier 2)</option>
+                <option value="Haunted Mansion|DL">Haunted Mansion (Tier 2)</option>
+                <option value="Millennium Falcon: Smugglers Run|DL">Millennium Falcon: Smugglers Run</option>
+                <option value="Buzz Lightyear Astro Blasters|DL">Buzz Lightyear Astro Blasters</option>
+              </optgroup>
+              <optgroup label="🎡 DCA Multi Pass (Stack for 11:00 AM+)">
+                <option value="Guardians of the Galaxy: Mission BREAKOUT!|DCA">Guardians of the Galaxy (Top Priority)</option>
+                <option value="Incredicoaster|DCA">Incredicoaster (Tier 2)</option>
+                <option value="Soarin' Around the World|DCA">Soarin' Around the World</option>
+                <option value="Toy Story Midway Mania!|DCA">Toy Story Midway Mania!</option>
+                <option value="WEB SLINGERS: A Spider-Man Adventure|DCA">WEB SLINGERS</option>
+                <option value="Goofy's Sky School|DCA">Goofy's Sky School</option>
+              </optgroup>
+              <optgroup label="✨ Lightning Lane Single Pass ($18 - $26)">
+                <option value="Star Wars: Rise of the Resistance|DL Single">Star Wars: Rise of the Resistance</option>
+                <option value="Radiator Springs Racers|DCA Single">Radiator Springs Racers</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-slate-400 font-semibold mb-1">Return Window Start</label>
+              <input type="time" id="llmpReturnTime" value="09:45" required class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white font-mono focus:border-purple-400 outline-none">
+            </div>
+            <div>
+              <label class="block text-slate-400 font-semibold mb-1">Return Window End</label>
+              <input type="time" id="llmpReturnEndTime" value="10:45" required class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white font-mono focus:border-purple-400 outline-none">
+            </div>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/25 text-slate-300 space-y-1 text-[11px]">
+            <p class="font-bold text-purple-300 flex items-center gap-1">
+              <i class="ph-bold ph-info"></i> Automatic 2-Hour Countdown Calculation:
+            </p>
+            <p>
+              Your next LL pull slot will be calculated as: <strong>Either 120 minutes from now OR immediately when you scan this pass</strong> at the ride queue touchpoint!
+            </p>
+          </div>
+
+          <div class="pt-2 flex items-center gap-2">
+            <button type="submit" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-bold tap-effect shadow-md shadow-purple-500/20 text-xs">
+              Confirm Reservation
+            </button>
+            <button type="button" onclick="closeBookLLModal(null, true)" class="px-4 py-2.5 rounded-xl bg-disney-card border border-white/10 text-slate-300 font-semibold tap-effect text-xs">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Hidden Native File Inputs -->
+    <input type="file" id="generalPhotoPicker" accept="image/*" class="hidden">
+
+  </div>
+
+  <!-- ================= FLOATING TOAST NOTIFICATION ================= -->
+  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full glass-card border border-amber-400/50 text-xs font-semibold text-white shadow-xl opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-2">
+    <i class="ph-bold ph-sparkle text-amber-300"></i>
+    <span id="toastMsg">Magic Saved!</span>
+  </div>
+
+  <!-- ================= APPLICATION JAVASCRIPT ================= -->
+  <script>
+    // Global State & Data Models
+    let checkinData = {};
+    let activeCardPhase = 'all';
+    let photoTargetType = null;
+    let photoTargetId = null;
+    let simulatedLLMPPasses = [];
+    let nextPullTime = null;
+
+    // Default Thursday Rope Drop & LLMP Master Itinerary (Drop-Free & Guardians Skipped)
+    const defaultDisneyCards = [
+      {
+        id: 'c-arrive',
+        phase: 'dl-morning',
+        sortTime: '06:50',
+        timeLabel: '6:50 AM – 7:15 AM',
+        title: 'Harbor Blvd Security & Turnstiles',
+        category: 'ropedrop',
+        tag: 'Arrival',
+        desc: 'Clear security bag check by 7:10 AM. Join the turnstile line at Disneyland Main Entrance. Turnstiles usually open at 7:20–7:25 AM.',
+        mapStop: 'castle'
+      },
+      {
+        id: 'c-turnstile-llmp',
+        phase: 'dl-morning',
+        sortTime: '07:25',
+        timeLabel: '7:25 AM – 7:35 AM',
+        title: 'Gate Tap-In & Book LLMP #1 ⚡',
+        desc: 'THE MOMENT your park ticket scans at the turnstile, open the Disneyland app immediately and book your 1st Multi Pass (Indiana Jones Adventure for ~9:45 AM). Then brisk walk down Main Street to the Central Plaza rope!',
+        mapStop: 'indy'
+      },
+      {
+        id: 'c-ropedrop-space',
+        phase: 'dl-morning',
+        sortTime: '08:00',
+        timeLabel: '8:00 AM – 8:35 AM',
+        title: 'Rope Drop Sprint: Space Mountain',
+        desc: 'Cast members drop ropes at 8:00 AM. Walk with purpose into Tomorrowland directly to Space Mountain for a 5–10 min standby walk-on!',
+        mapStop: 'spacemtn'
+      },
+      {
+        id: 'c-matterhorn',
+        phase: 'dl-morning',
+        sortTime: '08:40',
+        timeLabel: '8:40 AM – 9:15 AM',
+        title: 'Matterhorn Bobsleds (Standby)',
+        desc: 'Right after Space Mountain, cross over to Matterhorn Bobsleds before standby exceeds 20 minutes.',
+        mapStop: 'matterhorn'
+      },
+      {
+        id: 'c-bigthunder-pirates',
+        phase: 'dl-morning',
+        sortTime: '09:20',
+        timeLabel: '9:20 AM – 10:20 AM',
+        title: 'Big Thunder Mountain & Pirates',
+        desc: 'Head to Frontierland for Big Thunder Mountain, then walk onto Pirates of the Caribbean (Pirates does NOT have Lightning Lane, making morning standby essential!).',
+        mapStop: 'bigthunder'
+      },
+      {
+        id: 'c-redeem-indy',
+        phase: 'dl-morning',
+        sortTime: '10:25',
+        timeLabel: '10:25 AM – 10:55 AM',
+        title: 'Redeem LLMP #1: Indiana Jones Adventure',
+        desc: 'Scan your Indiana Jones Lightning Lane barcode! RULE 1 TRIGGER: The moment you scan at the touchpoint, immediately pull your next LLMP for DCA (e.g. WEB SLINGERS or Incredicoaster for 12:00 PM).',
+        mapStop: 'indy'
+      },
+      {
+        id: 'c-park-hop',
+        phase: 'dca-midday',
+        sortTime: '11:00',
+        timeLabel: '11:00 AM – 11:30 AM',
+        title: 'Park Hop to DCA & Cars Land Single Rider',
+        desc: 'Park hopping unlocks at 11:00 AM! Walk across the Esplanade into DCA. Head to Cars Land and enter the Radiator Springs Racers Single Rider line (bypasses the $26 Single Pass fee in 15–20 mins).',
+        mapStop: 'carsracers'
+      },
+      {
+        id: 'c-lunch-pym',
+        phase: 'dca-midday',
+        sortTime: '12:00',
+        timeLabel: '12:00 PM – 1:00 PM',
+        title: 'Pym Test Kitchen & Avengers Campus',
+        desc: 'Redeem WEB SLINGERS LLMP, grab Quantum Pretzel & craft brew cheese sauce at Pym Test Kitchen. Guardians skipped for stress-free afternoon!',
+        mapStop: 'pymtest'
+      },
+      {
+        id: 'c-soarin-incredicoaster',
+        phase: 'dca-midday',
+        sortTime: '13:15',
+        timeLabel: '1:15 PM – 3:30 PM',
+        title: 'Soarin\' Around the World & Incredicoaster',
+        desc: 'Use rolled DCA Lightning Lanes for Soarin\' and Incredicoaster (or Pixar Pier Single Rider). Cool off at Toy Story Midway Mania.',
+        mapStop: 'soarin'
+      },
+      {
+        id: 'c-hop-back',
+        phase: 'dl-night',
+        sortTime: '18:30',
+        timeLabel: '6:30 PM – 8:00 PM',
+        title: 'Hop Back to Disneyland: Galaxy\'s Edge',
+        desc: 'Return to Disneyland. Explore Star Wars: Galaxy\'s Edge under twilight. Hop in standby for Rise of the Resistance or Smugglers Run.',
+        mapStop: 'rise'
+      },
+      {
+        id: 'c-fireworks',
+        phase: 'dl-night',
+        sortTime: '21:00',
+        timeLabel: '9:00 PM – 10:00 PM',
+        title: 'Nighttime Spectacular & Fireworks',
+        desc: 'Find a spot near Main Street Central Plaza or along the Rivers of America for castle projections and fireworks.',
+        mapStop: 'castle'
+      }
+    ];
+
+    let disneyCards = [];
+
+    // Image Compression Helper
+    window.compressImageFile = async function(file, maxW = 900, maxH = 900, quality = 0.72) {
+      if (!file) throw new Error("No file provided");
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = new Image();
+          img.onload = function() {
+            let width = img.naturalWidth || img.width;
+            let height = img.naturalHeight || img.height;
+            if (width > maxW || height > maxH) {
+              if (width > height) {
+                height = Math.round((height * maxW) / width);
+                width = maxW;
+              } else {
+                width = Math.round((width * maxH) / height);
+                height = maxH;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.onerror = () => reject(new Error("Image decode failed"));
+          img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error("File read failed"));
+        reader.readAsDataURL(file);
+      });
+    };
+
+    // Storage Management
+    function loadStorage() {
+      try {
+        const storedCards = localStorage.getItem('disney_plan_cards_v1');
+        disneyCards = storedCards ? JSON.parse(storedCards) : JSON.parse(JSON.stringify(defaultDisneyCards));
+
+        const storedCheckins = localStorage.getItem('disney_checkins_v1');
+        checkinData = storedCheckins ? JSON.parse(storedCheckins) : {};
+
+        const storedLLMP = localStorage.getItem('disney_llmp_passes_v1');
+        simulatedLLMPPasses = storedLLMP ? JSON.parse(storedLLMP) : [
+          {
+            id: 'll-1',
+            ride: 'Indiana Jones Adventure',
+            park: 'DL',
+            windowStart: '09:45',
+            windowEnd: '10:45',
+            nextEligible: '10:25'
+          }
+        ];
+      } catch (e) {
+        console.warn("Storage read error:", e);
+        disneyCards = JSON.parse(JSON.stringify(defaultDisneyCards));
+        checkinData = {};
+        simulatedLLMPPasses = [];
+      }
+    }
+
+    function saveStorage() {
+      try {
+        localStorage.setItem('disney_plan_cards_v1', JSON.stringify(disneyCards));
+        localStorage.setItem('disney_checkins_v1', JSON.stringify(checkinData));
+        localStorage.setItem('disney_llmp_passes_v1', JSON.stringify(simulatedLLMPPasses));
+      } catch (e) {
+        console.warn("Storage write error:", e);
+      }
+    }
+
+    // Anaheim Clock Ticker (PST)
+    function updateAnaheimClock() {
+      const clockEl = document.getElementById('anaheimClock');
+      if (!clockEl) return;
+      try {
+        const timeStr = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/Los_Angeles',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }).format(new Date());
+        clockEl.textContent = `${timeStr} PST`;
+      } catch (err) {
+        clockEl.textContent = '--:-- PST';
+      }
+    }
+    setInterval(updateAnaheimClock, 1000);
+
+    // Toast alert utility
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      if (!toast) return;
+      toastMsg.textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+
+    // Tab switcher
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-view').forEach(v => v.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-amber-400');
+        btn.classList.add('text-slate-400');
+        const icon = btn.querySelector('i');
+        if (icon) icon.className = icon.className.replace('ph-fill', 'ph-bold');
+      });
+
+      const activeView = document.getElementById('view-' + tabId);
+      if (activeView) activeView.classList.remove('hidden');
+
+      const activeBtn = document.getElementById('nav-' + tabId);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400');
+        activeBtn.classList.add('text-amber-400');
+        const icon = activeBtn.querySelector('i');
+        if (icon) icon.className = icon.className.replace('ph-bold', 'ph-fill');
+      }
+
+      if (tabId === 'map') {
+        initResortMap();
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Phase Switcher for Timeline
+    function switchPhase(phaseKey) {
+      activeCardPhase = phaseKey;
+      document.querySelectorAll('.phase-pill').forEach(btn => {
+        btn.classList.remove('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+        btn.classList.add('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+      });
+
+      const activePill = document.getElementById('pill-' + phaseKey);
+      if (activePill) {
+        activePill.classList.remove('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+        activePill.classList.add('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+      }
+
+      renderTimeline();
+    }
+
+    // Render Timeline Cards
+    function renderTimeline() {
+      const container = document.getElementById('timelineContainer');
+      if (!container) return;
+
+      let filteredCards = disneyCards;
+      if (activeCardPhase !== 'all') {
+        filteredCards = disneyCards.filter(c => c.phase === activeCardPhase);
+      }
+      filteredCards.sort((a, b) => (a.sortTime || '00:00').localeCompare(b.sortTime || '00:00'));
+
+      const completedStops = Object.keys(checkinData).filter(k => disneyCards.some(c => c.id === k)).length;
+      const totalStops = disneyCards.length;
+      const pct = Math.round((completedStops / (totalStops || 1)) * 100);
+
+      const progText = document.getElementById('progressStopsText');
+      const progBar = document.getElementById('stopsProgressBar');
+      if (progText) progText.textContent = `${completedStops} / ${totalStops}`;
+      if (progBar) progBar.style.width = `${pct}%`;
+
+      if (filteredCards.length === 0) {
+        container.innerHTML = `
+          <div class="glass-card rounded-2xl p-8 text-center space-y-2">
+            <h4 class="text-sm font-bold text-white">No stops in this phase</h4>
+            <p class="text-xs text-slate-400">Tap "+ Add Stop" to plan an attraction or event.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filteredCards.map(card => {
+        const checkin = checkinData[card.id];
+        const isCompleted = !!checkin;
+
+        let categoryBadge = '';
+        if (card.category === 'ropedrop') {
+          categoryBadge = `<span class="px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 text-[10px] font-bold font-mono border border-amber-400/30">Rope Drop Sprint</span>`;
+        } else if (card.category === 'llmp') {
+          categoryBadge = `<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold font-mono border border-purple-500/30">⚡ Lightning Lane</span>`;
+        } else {
+          categoryBadge = `<span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-bold font-mono border border-cyan-500/30">${card.tag || 'Strategy'}</span>`;
+        }
+
+        let mapButton = '';
+        if (card.mapStop) {
+          mapButton = `
+            <button onclick="flyToMapStop('${card.mapStop}')" class="tap-effect inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-amber-400/15 text-amber-300 border border-amber-400/30 font-semibold">
+              <i class="ph-bold ph-map-pin"></i> View on Map
+            </button>
+          `;
+        }
+
+        return `
+          <div class="glass-card rounded-2xl p-3.5 space-y-2 border-white/10 ${isCompleted ? 'border-emerald-500/30 bg-disney-midnight/90' : ''}">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs font-mono font-bold text-amber-300">${card.timeLabel}</span>
+                  ${categoryBadge}
+                </div>
+                <h3 class="text-sm font-bold text-white mt-1">${card.title}</h3>
+                <p class="text-xs text-slate-300 mt-0.5 leading-relaxed">${card.desc}</p>
+                <div class="flex items-center gap-2 mt-2">
+                  ${mapButton}
+                  <button onclick="triggerCardPhotoCapture('${card.id}')" class="tap-effect inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-xl bg-slate-800 text-slate-200 border border-white/10 hover:border-amber-400/40 font-semibold">
+                    <div class="w-4 h-4 rounded-full story-ring-gradient p-[1px] flex items-center justify-center">
+                      <div class="w-full h-full bg-disney-midnight rounded-full flex items-center justify-center text-white text-[8px]">
+                        <i class="ph-bold ph-plus"></i>
+                      </div>
+                    </div>
+                    <span>Add Story</span>
+                  </button>
+                </div>
+              </div>
+              <button onclick="deleteTimelineCard('${card.id}')" class="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 hover:text-rose-400 flex items-center justify-center tap-effect border border-white/5" title="Delete">
+                <i class="ph-bold ph-trash text-xs"></i>
+              </button>
+            </div>
+            ${renderCardStoriesHtml(card.id, card.title)}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Helper to render Instagram Story highlights on timeline cards
+    function renderCardStoriesHtml(cardId, cardTitle) {
+      const checkin = checkinData[cardId];
+      if (!checkin) return '';
+
+      // Support both legacy single dataUrl and multi-photo story arrays
+      const photos = Array.isArray(checkin.photos) ? checkin.photos : (checkin.dataUrl ? [{
+        id: 'legacy-' + cardId,
+        dataUrl: checkin.dataUrl,
+        checkinTimestamp: checkin.timestamp || 'Today'
+      }] : []);
+
+      if (photos.length === 0) return '';
+
+      const latestPhoto = photos[photos.length - 1];
+      const bubblesHtml = photos.map((p, pIdx) => `
+        <div onclick="openTimelineStoryLightbox('${cardId}', ${pIdx})" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect group">
+          <div class="w-11 h-11 rounded-full story-ring-gradient p-[2px] shadow-md group-hover:scale-105 transition-transform">
+            <div class="w-full h-full bg-disney-midnight rounded-full p-[2px]">
+              <img src="${p.dataUrl}" alt="Story" class="w-full h-full object-cover rounded-full">
+            </div>
+          </div>
+          <span class="text-[9px] font-mono text-slate-300 mt-0.5 truncate max-w-[44px]">Story ${pIdx + 1}</span>
+        </div>
+      `).join('');
+
+      return `
+        <div class="mt-2.5 space-y-2 pt-2 border-t border-white/5">
+          <!-- Story Hero Preview -->
+          <div onclick="openTimelineStoryLightbox('${cardId}', ${photos.length - 1})" class="relative rounded-2xl overflow-hidden group cursor-pointer tap-effect border border-white/10 shadow-lg">
+            <img src="${latestPhoto.dataUrl}" alt="${cardTitle} Story" class="w-full h-32 object-cover group-hover:scale-102 transition-transform duration-300">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-between p-2.5">
+              <div class="flex items-center justify-between">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-bold text-white border border-white/20 font-mono">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  ${photos.length} Stor${photos.length > 1 ? 'ies' : 'y'}
+                </span>
+                <button onclick="deleteCardStoryPhoto('${cardId}', '${latestPhoto.id}', event)" class="w-6 h-6 rounded-full bg-black/60 backdrop-blur-md text-slate-300 hover:text-rose-400 flex items-center justify-center text-xs tap-effect" title="Delete latest">
+                  <i class="ph-bold ph-trash"></i>
+                </button>
+              </div>
+              <div>
+                <p class="text-[10px] text-amber-300 font-mono flex items-center gap-1">
+                  <i class="ph-bold ph-clock"></i> ${latestPhoto.checkinTimestamp}
+                </p>
+                <p class="text-xs font-bold text-white tracking-tight">Tap to view full story ➔</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Highlight Avatars & Add Story Bubble -->
+          <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+            <div onclick="triggerCardPhotoCapture('${cardId}')" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect">
+              <div class="w-11 h-11 rounded-full border-2 border-dashed border-amber-400/60 bg-amber-400/5 flex items-center justify-center">
+                <div class="w-9 h-9 rounded-full bg-disney-midnight flex items-center justify-center text-amber-400">
+                  <i class="ph-bold ph-plus text-sm"></i>
+                </div>
+              </div>
+              <span class="text-[9px] text-amber-400 font-semibold mt-0.5">Add</span>
+            </div>
+            ${bubblesHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    function openTimelineStoryLightbox(cardId, photoIdx = 0) {
+      const checkin = checkinData[cardId];
+      if (!checkin) return;
+      const photos = Array.isArray(checkin.photos) ? checkin.photos : [{
+        id: 'legacy-' + cardId,
+        dataUrl: checkin.dataUrl,
+        checkinTimestamp: checkin.timestamp || 'Today'
+      }];
+      if (!photos.length) return;
+
+      activeStoryRideId = cardId;
+      activeStoryPhotoIdx = Math.max(0, Math.min(photoIdx, photos.length - 1));
+      updateStoryLightboxUI();
+      document.getElementById('photoLightboxModal').classList.remove('hidden');
+    }
+
+    function deleteCardStoryPhoto(cardId, photoId, event) {
+      if (event) event.stopPropagation();
+      const checkin = checkinData[cardId];
+      if (!checkin) return;
+
+      if (confirm('Delete this story photo?')) {
+        if (Array.isArray(checkin.photos)) {
+          checkin.photos = checkin.photos.filter(p => p.id !== photoId);
+          if (checkin.photos.length === 0) delete checkinData[cardId];
+        } else {
+          delete checkinData[cardId];
+        }
+        closeLightbox(null, true);
+        saveStorage();
+        renderTimeline();
+        renderAlbumView();
+        showToast('Story photo removed');
+      }
+    }
+
+    function triggerCardPhotoCapture(cardId) {
+      photoTargetType = 'card';
+      photoTargetId = cardId;
+      activeRideForStory = null;
+      const input = document.getElementById('generalPhotoPicker');
+      input.value = '';
+      input.click();
+    }
+
+    function triggerFoodPhotoUpload(foodId) {
+      photoTargetType = 'food';
+      photoTargetId = foodId;
+      activeRideForStory = null;
+      const input = document.getElementById('generalPhotoPicker');
+      input.value = '';
+      input.click();
+    }
+
+    function previewFoodPhoto(foodId, title) {
+      const img = document.getElementById('img-' + foodId);
+      if (!img) return;
+      openLightboxManual(img.src, title, 'Food Recommendation');
+    }
+
+    function resetAllDiningPhotos() {
+      if (confirm('Reset custom dining photos?')) {
+        document.getElementById('img-jolly-holiday').src = 'https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=700&q=80';
+        document.getElementById('img-pym-test').src = 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=700&q=80';
+        document.getElementById('img-cozy-cone').src = 'https://images.unsplash.com/photo-1579954115545-a95591f28bfc?auto=format&fit=crop&w=700&q=80';
+        document.getElementById('img-bengal-bbq').src = 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=80';
+        showToast('Dining photos reset to default');
+      }
+    }
+
+    // Modal Add Stop
+    function openCardModal() {
+      const modal = document.getElementById('cardEditorModal');
+      document.getElementById('cardEditorForm').reset();
+      document.getElementById('editCardId').value = '';
+      document.getElementById('editCardSortTime').value = '08:00';
+      document.getElementById('editCardTimeLabel').value = '8:00 AM PST';
+      modal.classList.remove('hidden');
+    }
+
+    function closeCardModal(event, force = false) {
+      if (force || (event && event.target.id === 'cardEditorModal')) {
+        document.getElementById('cardEditorModal').classList.add('hidden');
+      }
+    }
+
+    function handleSaveCard(e) {
+      e.preventDefault();
+      const newCard = {
+        id: 'c-' + Date.now(),
+        phase: document.getElementById('editCardPhase').value,
+        sortTime: document.getElementById('editCardSortTime').value,
+        timeLabel: document.getElementById('editCardTimeLabel').value,
+        title: document.getElementById('editCardTitle').value,
+        category: document.getElementById('editCardCategory').value,
+        tag: document.getElementById('editCardTag').value || 'Stop',
+        desc: document.getElementById('editCardDesc').value,
+        mapStop: document.getElementById('editCardMapStop').value || null
+      };
+
+      disneyCards.push(newCard);
+      saveStorage();
+      renderTimeline();
+      closeCardModal(null, true);
+      showToast('New stop added to itinerary!');
+    }
+
+    function deleteTimelineCard(cardId) {
+      if (confirm('Delete this stop from the timeline?')) {
+        disneyCards = disneyCards.filter(c => c.id !== cardId);
+        delete checkinData[cardId];
+        saveStorage();
+        renderTimeline();
+        renderAlbumView();
+        showToast('Stop removed');
+      }
+    }
+
+    // ================= LLMP CONTROL DECK SIMULATION =================
+    function renderLLMPDeck() {
+      const activeContainer = document.getElementById('activeLLContainer');
+      const countLabel = document.getElementById('activeLLCount');
+      const badge = document.getElementById('llmpActiveBadge');
+
+      if (countLabel) countLabel.textContent = `${simulatedLLMPPasses.length} pass${simulatedLLMPPasses.length === 1 ? '' : 'es'} held`;
+      if (badge) {
+        if (simulatedLLMPPasses.length > 0) badge.classList.remove('hidden');
+        else badge.classList.add('hidden');
+      }
+
+      if (!activeContainer) return;
+
+      if (simulatedLLMPPasses.length === 0) {
+        activeContainer.innerHTML = `
+          <div class="glass-card rounded-2xl p-4 text-center border-dashed border-white/20">
+            <p class="text-xs text-slate-400">No active passes held right now. Tap "Simulate Booking LLMP" above!</p>
+          </div>
+        `;
+        return;
+      }
+
+      activeContainer.innerHTML = simulatedLLMPPasses.map(pass => `
+        <div class="glass-card rounded-2xl p-3.5 border-purple-500/30 bg-purple-950/20 flex items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-300 font-mono text-[9px] font-bold">${pass.park}</span>
+              <h4 class="text-xs font-bold text-white">${pass.ride}</h4>
+            </div>
+            <p class="text-[11px] text-amber-300 font-mono mt-0.5">Return: ${pass.windowStart} – ${pass.windowEnd}</p>
+          </div>
+          <button onclick="simulateScanLL('${pass.id}')" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-disney-midnight font-bold text-xs tap-effect shadow-md flex items-center gap-1 flex-shrink-0">
+            <i class="ph-bold ph-scan"></i> Scan Tap
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function openBookLLModal() {
+      document.getElementById('bookLLModal').classList.remove('hidden');
+    }
+
+    function closeBookLLModal(event, force = false) {
+      if (force || (event && event.target.id === 'bookLLModal')) {
+        document.getElementById('bookLLModal').classList.add('hidden');
+      }
+    }
+
+    function handleConfirmBookLL(e) {
+      e.preventDefault();
+      const raw = document.getElementById('llmpSelectRide').value.split('|');
+      const ride = raw[0];
+      const park = raw[1] || 'DL';
+      const windowStart = document.getElementById('llmpReturnTime').value;
+      const windowEnd = document.getElementById('llmpReturnEndTime').value;
+
+      const newPass = {
+        id: 'll-' + Date.now(),
+        ride,
+        park,
+        windowStart,
+        windowEnd,
+        nextEligible: 'Calculated'
+      };
+
+      simulatedLLMPPasses.push(newPass);
+      saveStorage();
+      renderLLMPDeck();
+      closeBookLLModal(null, true);
+      showToast(`⚡ Booked ${ride}! 2-Hour rule active.`);
+    }
+
+    function simulateScanLL(passId) {
+      const pass = simulatedLLMPPasses.find(p => p.id === passId);
+      if (!pass) return;
+
+      simulatedLLMPPasses = simulatedLLMPPasses.filter(p => p.id !== passId);
+      saveStorage();
+      renderLLMPDeck();
+      showToast(`🎉 Tapped into ${pass.ride}! NEXT PASS UNLOCKED NOW!`);
+    }
+
+    function resetSimulatedLLMP() {
+      simulatedLLMPPasses = [];
+      saveStorage();
+      renderLLMPDeck();
+      showToast('Simulated passes reset');
+    }
+
+    function setSimulatedNow() {
+      showToast('Next LLMP slot is READY TO BOOK right now!');
+    }
+
+    // ================= RESORT MAP (LEAFLET) =================
+    let resortMapInstance = null;
+    let resortMarkers = [];
+
+    const disneyPins = [
+      { id: 'spacemtn', name: 'Space Mountain', category: 'dl', lat: 33.8105, lng: -117.9174, desc: 'Tomorrowland • Rope Drop Walk-on' },
+      { id: 'indy', name: 'Indiana Jones Adventure', category: 'dl', lat: 33.8118, lng: -117.9205, desc: 'Adventureland • LLMP Target #1' },
+      { id: 'bigthunder', name: 'Big Thunder Mountain', category: 'dl', lat: 33.8129, lng: -117.9202, desc: 'Frontierland • Mine Train Coaster' },
+      { id: 'pirates', name: 'Pirates of the Caribbean', category: 'dl', lat: 33.8115, lng: -117.9224, desc: 'New Orleans Square • Standby Essential' },
+      { id: 'matterhorn', name: 'Matterhorn Bobsleds', category: 'dl', lat: 33.8128, lng: -117.9180, desc: 'Fantasyland • Early Standby' },
+      { id: 'rise', name: 'Rise of the Resistance', category: 'dl', lat: 33.8149, lng: -117.9218, desc: 'Galaxy\'s Edge • Trackless Wonder' },
+      { id: 'castle', name: 'Sleeping Beauty Castle', category: 'dl', lat: 33.8121, lng: -117.9190, desc: 'Central Hub • Rope Drop Checkpoint' },
+      { id: 'carsracers', name: 'Radiator Springs Racers', category: 'dca', lat: 33.8052, lng: -117.9171, desc: 'Cars Land • Single Rider Lifesaver' },
+      { id: 'incredicoaster', name: 'Incredicoaster', category: 'dca', lat: 33.8041, lng: -117.9210, desc: 'Pixar Pier • Loop Coaster' },
+      { id: 'soarin', name: 'Soarin\' Around the World', category: 'dca', lat: 33.8079, lng: -117.9218, desc: 'Grizzly Peak • Smooth Hang Glider' },
+      { id: 'webslingers', name: 'WEB SLINGERS', category: 'dca', lat: 33.8073, lng: -117.9184, desc: 'Avengers Campus • Interactive 3D' },
+      { id: 'toystory', name: 'Toy Story Midway Mania', category: 'dca', lat: 33.8048, lng: -117.9218, desc: 'Pixar Pier • 4D Shooter' },
+      { id: 'jollyholiday', name: 'Jolly Holiday Bakery', category: 'food', lat: 33.8114, lng: -117.9192, desc: 'Birria Grilled Cheese & Macarons' },
+      { id: 'pymtest', name: 'Pym Test Kitchen', category: 'food', lat: 33.8071, lng: -117.9181, desc: 'Quantum Pretzels & Sandwiches' },
+      { id: 'cozycone', name: 'Cozy Cone Motel', category: 'food', lat: 33.8058, lng: -117.9175, desc: 'Chili Cones & Churro Bites' },
+      { id: 'bengalbbq', name: 'Bengal Barbecue', category: 'food', lat: 33.8116, lng: -117.9202, desc: 'Adventureland Beef & Bacon Skewers' }
+    ];
+
+    function initResortMap() {
+      if (resortMapInstance) {
+        setTimeout(() => resortMapInstance.invalidateSize(), 200);
+        return;
+      }
+
+      resortMapInstance = L.map('disneyLeafletMap').setView([33.8090, -117.9190], 15);
+
+      L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        subdomains: ['0', '1', '2', '3'],
+        maxZoom: 20,
+        attribution: '© Google Maps'
+      }).addTo(resortMapInstance);
+
+      renderResortMarkers('all');
+    }
+
+    function renderResortMarkers(category = 'all') {
+      resortMarkers.forEach(m => resortMapInstance.removeLayer(m));
+      resortMarkers = [];
+
+      disneyPins.forEach(pin => {
+        if (category !== 'all' && pin.category !== category) return;
+
+        let pinColor = '#fbbf24';
+        if (pin.category === 'dca') pinColor = '#06b6d4';
+        if (pin.category === 'food') pinColor = '#f43f5e';
+
+        const customIcon = L.divIcon({
+          className: 'disney-map-pin',
+          html: `<div style="background-color: ${pinColor}; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #000;">★</div>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13]
+        });
+
+        const marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).addTo(resortMapInstance);
+        marker.bindPopup(`
+          <div style="min-width: 170px; color: #fff;">
+            <strong style="color: ${pinColor}; font-size: 12px;">${pin.name}</strong>
+            <p style="font-size: 11px; margin-top: 3px; color: #cbd5e1;">${pin.desc}</p>
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${pin.lat},${pin.lng}" target="_blank" style="display: inline-block; margin-top: 6px; font-size: 10px; background: #fbbf24; color: #000; padding: 3px 8px; border-radius: 6px; font-weight: bold; text-decoration: none;">Navigate ➔</a>
+          </div>
+        `);
+        marker.pinId = pin.id;
+        resortMarkers.push(marker);
+      });
+    }
+
+    function filterMapCategory(cat) {
+      document.querySelectorAll('.map-chip').forEach(c => {
+        c.classList.remove('bg-amber-400', 'text-disney-midnight');
+        c.classList.add('bg-disney-card', 'text-slate-300');
+      });
+      const activeChip = document.getElementById('map-chip-' + cat);
+      if (activeChip) {
+        activeChip.classList.remove('bg-disney-card', 'text-slate-300');
+        activeChip.classList.add('bg-amber-400', 'text-disney-midnight');
+      }
+      renderResortMarkers(cat);
+    }
+
+    function resetResortMap() {
+      if (resortMapInstance) {
+        resortMapInstance.setView([33.8090, -117.9190], 15);
+      }
+    }
+
+    function flyToMapStop(stopId) {
+      switchTab('map');
+      setTimeout(() => {
+        const pin = disneyPins.find(p => p.id === stopId);
+        if (pin && resortMapInstance) {
+          resortMapInstance.flyTo([pin.lat, pin.lng], 17, { duration: 1 });
+          const m = resortMarkers.find(x => x.pinId === stopId);
+          if (m) setTimeout(() => m.openPopup(), 950);
+        }
+      }, 200);
+    }
+
+    function openLightboxManual(imgSrc, title, time) {
+      const modal = document.getElementById('photoLightboxModal');
+      const img = document.getElementById('lightboxImage');
+      const t = document.getElementById('lightboxTitle');
+      const tm = document.getElementById('lightboxTime');
+      const bars = document.getElementById('storyProgressBars');
+      const counter = document.getElementById('lightboxStoryCounter');
+
+      if (bars) bars.innerHTML = '';
+      if (counter) counter.textContent = '1 of 1';
+      t.textContent = title;
+      tm.textContent = time;
+      img.src = imgSrc;
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeLightbox(event, force = false) {
+      if (force || (event && event.target.id === 'photoLightboxModal')) {
+        document.getElementById('photoLightboxModal').classList.add('hidden');
+        activeStoryRideId = null;
+      }
+    }
+
+    function clearAllAlbumPhotos() {
+      if (confirm('Clear all photos from the album?')) {
+        checkinData = {};
+        saveStorage();
+        renderTimeline();
+        renderAllRidesView();
+        renderAlbumView();
+        showToast('Album cleared');
+      }
+    }
+
+    // ================= COMPLETE RIDES DIRECTORY (DISNEYLAND & DCA) =================
+    // Comprehensive ride database categorized by park, land, and LLMP availability.
+    // Note: Guardians is explicitly marked with skip: true per user instruction.
+    const allDisneyRides = [
+      // 🏰 DISNEYLAND PARK (30 Rides)
+      // Tomorrowland
+      { id: 'r-spacemtn', name: 'Space Mountain', park: 'dl', land: 'Tomorrowland', llmp: true, singleRider: true, intensity: 'High (Thrill Coaster)', skip: false },
+      { id: 'r-star-tours', name: 'Star Tours - The Adventures Continue', park: 'dl', land: 'Tomorrowland', llmp: true, singleRider: false, intensity: 'Moderate (Motion Simulator)', skip: false },
+      { id: 'r-buzz', name: 'Buzz Lightyear Astro Blasters', park: 'dl', land: 'Tomorrowland', llmp: true, singleRider: false, intensity: 'Low (Laser Blaster Dark Ride)', skip: false },
+      { id: 'r-astro-orbiter', name: 'Astro Orbitor', park: 'dl', land: 'Tomorrowland', llmp: false, singleRider: false, intensity: 'Low (Aerial Spinner)', skip: false },
+      { id: 'r-autopia', name: 'Autopia', park: 'dl', land: 'Tomorrowland', llmp: true, singleRider: false, intensity: 'Low (Scenic Highway)', skip: false },
+      { id: 'r-nemo', name: 'Finding Nemo Submarine Voyage', park: 'dl', land: 'Tomorrowland', llmp: false, singleRider: false, intensity: 'Low (Submarine Lagoon)', skip: false },
+
+      // Adventureland
+      { id: 'r-indy', name: 'Indiana Jones Adventure', park: 'dl', land: 'Adventureland', llmp: true, singleRider: true, intensity: 'High (Rough Motion Thrill)', skip: false },
+      { id: 'r-jungle-cruise', name: 'Jungle Cruise', park: 'dl', land: 'Adventureland', llmp: false, singleRider: false, intensity: 'Low (Classic Boat Tour)', skip: false },
+
+      // New Orleans Square & Critter Country
+      { id: 'r-pirates', name: 'Pirates of the Caribbean', park: 'dl', land: 'New Orleans Square', llmp: false, singleRider: false, intensity: 'Low (Classic Boat Ride - 2 Minor Drops)', skip: false },
+      { id: 'r-haunted-mansion', name: 'Haunted Mansion', park: 'dl', land: 'New Orleans Square', llmp: true, singleRider: false, intensity: 'Low (Doom Buggy Dark Ride)', skip: false },
+      { id: 'r-tiana', name: 'Tiana\'s Bayou Adventure', park: 'dl', land: 'Critter Country', llmp: true, singleRider: true, intensity: 'Moderate (Flume Ride with 50ft Drop)', skip: false },
+      { id: 'r-pooh', name: 'The Many Adventures of Winnie the Pooh', park: 'dl', land: 'Critter Country', llmp: false, singleRider: false, intensity: 'Low (Gentle Dark Ride)', skip: false },
+
+      // Frontierland
+      { id: 'r-big-thunder', name: 'Big Thunder Mountain Railroad', park: 'dl', land: 'Frontierland', llmp: true, singleRider: false, intensity: 'Moderate (Mine Train Coaster)', skip: false },
+
+      // Fantasyland
+      { id: 'r-matterhorn', name: 'Matterhorn Bobsleds', park: 'dl', land: 'Fantasyland', llmp: true, singleRider: true, intensity: 'Moderate (Dual-Track Coaster)', skip: false },
+      { id: 'r-peter-pan', name: 'Peter Pan\'s Flight', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Suspended Dark Ride)', skip: false },
+      { id: 'r-mr-toad', name: 'Mr. Toad\'s Wild Ride', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Classic Dark Ride)', skip: false },
+      { id: 'r-snow-white', name: 'Snow White\'s Enchanted Wish', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Classic Dark Ride)', skip: false },
+      { id: 'r-pinocchio', name: 'Pinocchio\'s Daring Journey', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Classic Dark Ride)', skip: false },
+      { id: 'r-dumbo', name: 'Dumbo the Flying Elephant', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Classic Spinner)', skip: false },
+      { id: 'r-alice', name: 'Alice in Wonderland', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Two-Level Dark Ride)', skip: false },
+      { id: 'r-mad-tea-party', name: 'Mad Tea Party', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low to High (Spinning Teacups)', skip: false },
+      { id: 'r-casey-jr', name: 'Casey Jr. Circus Train', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Scenic Mini Train)', skip: false },
+      { id: 'r-storybook', name: 'Storybook Land Canal Boats', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Miniature Village Boat Tour)', skip: false },
+      { id: 'r-small-world', name: '"it\'s a small world"', park: 'dl', land: 'Fantasyland', llmp: true, singleRider: false, intensity: 'Low (Musical Boat Ride)', skip: false },
+      { id: 'r-carrousel', name: 'King Arthur Carrousel', park: 'dl', land: 'Fantasyland', llmp: false, singleRider: false, intensity: 'Low (Classic Carousel)', skip: false },
+
+      // Star Wars: Galaxy's Edge
+      { id: 'r-rise', name: 'Star Wars: Rise of the Resistance', park: 'dl', land: 'Star Wars: Galaxy\'s Edge', llmp: false, singleRider: false, intensity: 'Moderate (Trackless Dark Ride + Small Drop)', singlePass: true, skip: false },
+      { id: 'r-smugglers', name: 'Millennium Falcon: Smugglers Run', park: 'dl', land: 'Star Wars: Galaxy\'s Edge', llmp: true, singleRider: true, intensity: 'Moderate (Interactive Flight Simulator)', skip: false },
+
+      // Mickey's Toontown
+      { id: 'r-runaway-railway', name: 'Mickey & Minnie\'s Runaway Railway', park: 'dl', land: 'Mickey\'s Toontown', llmp: true, singleRider: false, intensity: 'Low (Trackless 2.5D Cartoon Adventure)', skip: false },
+      { id: 'r-roger-rabbit', name: 'Roger Rabbit\'s Car Toon Spin', park: 'dl', land: 'Mickey\'s Toontown', llmp: false, singleRider: false, intensity: 'Low (Spinning Dark Ride)', skip: false },
+      { id: 'r-chip-dale', name: 'Chip \'n\' Dale\'s GADGETcoaster', park: 'dl', land: 'Mickey\'s Toontown', llmp: false, singleRider: false, intensity: 'Low (Junior Roller Coaster)', skip: false },
+
+      // 🎡 DISNEY CALIFORNIA ADVENTURE (DCA - 18 Rides)
+      // Avengers Campus
+      { id: 'r-guardians', name: 'Guardians of the Galaxy: Mission BREAKOUT!', park: 'dca', land: 'Avengers Campus', llmp: true, singleRider: false, intensity: 'Extreme (6 Heavy Accelerated Free-Fall Drops)', skip: true, skipReason: 'User opted out due to drop intensity' },
+      { id: 'r-webslingers', name: 'WEB SLINGERS: A Spider-Man Adventure', park: 'dca', land: 'Avengers Campus', llmp: true, singleRider: true, intensity: 'Low (Interactive 3D Web-Shooting)', skip: false },
+
+      // Cars Land
+      { id: 'r-radiator-racers', name: 'Radiator Springs Racers', park: 'dca', land: 'Cars Land', llmp: false, singleRider: true, intensity: 'Moderate (High-Speed Outdoor Duel)', singlePass: true, skip: false },
+      { id: 'r-luigi', name: 'Luigi\'s Rollickin\' Roadsters', park: 'dca', land: 'Cars Land', llmp: false, singleRider: false, intensity: 'Low (Trackless Dancing Cars)', skip: false },
+      { id: 'r-mater', name: 'Mater\'s Junkyard Jamboree', park: 'dca', land: 'Cars Land', llmp: false, singleRider: false, intensity: 'Low (Whip-Spinning Tractor Square Dance)', skip: false },
+
+      // Pixar Pier
+      { id: 'r-incredicoaster', name: 'Incredicoaster', park: 'dca', land: 'Pixar Pier', llmp: true, singleRider: true, intensity: 'High (Launch Coaster with 1 Inversion Loop)', skip: false },
+      { id: 'r-toy-story', name: 'Toy Story Midway Mania!', park: 'dca', land: 'Pixar Pier', llmp: true, singleRider: false, intensity: 'Low (4D Carnival Shooter)', skip: false },
+      { id: 'r-pixar-pal', name: 'Pixar Pal-A-Round (Non-Swinging)', park: 'dca', land: 'Pixar Pier', llmp: false, singleRider: false, intensity: 'Low (Panoramic Ferris Wheel)', skip: false },
+      { id: 'r-pixar-pal-swinging', name: 'Pixar Pal-A-Round (Swinging)', park: 'dca', land: 'Pixar Pier', llmp: false, singleRider: false, intensity: 'Moderate to High (Swinging Gondolas)', skip: false },
+      { id: 'r-inside-out', name: 'Inside Out Emotional Whirlwind', park: 'dca', land: 'Pixar Pier', llmp: false, singleRider: false, intensity: 'Low (Family Balloon Spinner)', skip: false },
+      { id: 'r-jessie', name: 'Jessie\'s Critter Carousel', park: 'dca', land: 'Pixar Pier', llmp: false, singleRider: false, intensity: 'Low (Woody\'s Roundup Carousel)', skip: false },
+
+      // Grizzly Peak
+      { id: 'r-soarin', name: 'Soarin\' Around the World', park: 'dca', land: 'Grizzly Peak', llmp: true, singleRider: true, intensity: 'Low (Gentle IMAX Hang-Gliding Flight)', skip: false },
+      { id: 'r-grizzly-river', name: 'Grizzly River Run', park: 'dca', land: 'Grizzly Peak', llmp: true, singleRider: true, intensity: 'Moderate (White-Water Raft River Rapids)', skip: false },
+
+      // Hollywood Land
+      { id: 'r-monsters-inc', name: 'Monsters, Inc. Mike & Sulley to the Rescue!', park: 'dca', land: 'Hollywood Land', llmp: true, singleRider: false, intensity: 'Low (Taxi Cab Dark Ride)', skip: false },
+
+      // Paradise Gardens Park
+      { id: 'r-little-mermaid', name: 'The Little Mermaid ~ Ariel\'s Undersea Adventure', park: 'dca', land: 'Paradise Gardens Park', llmp: false, singleRider: false, intensity: 'Low (Omnimover Clamshell Ride)', skip: false },
+      { id: 'r-goofy-sky-school', name: 'Goofy\'s Sky School', park: 'dca', land: 'Paradise Gardens Park', llmp: true, singleRider: true, intensity: 'Moderate (Wild Mouse Coaster)', skip: false },
+      { id: 'r-silly-symphony', name: 'Silly Symphony Swings', park: 'dca', land: 'Paradise Gardens Park', llmp: false, singleRider: false, intensity: 'Low (Wave Swinger Over Water)', skip: false },
+      { id: 'r-golden-zephyr', name: 'Golden Zephyr', park: 'dca', land: 'Paradise Gardens Park', llmp: false, singleRider: false, intensity: 'Low (Retro Flying Rocket Carousel)', skip: false },
+      { id: 'r-jumpin-jellyfish', name: 'Jumpin\' Jellyfish', park: 'dca', land: 'Paradise Gardens Park', llmp: false, singleRider: false, intensity: 'Low (Gentle Parachute Jump)', skip: false }
+    ];
+
+    // State: Ridden ride IDs -> Set
+    let riddenRidesSet = new Set();
+    let currentRideParkFilter = 'all'; // 'all', 'dl', 'dca', 'ridden'
+    let currentRideSearchQuery = '';
+    let currentRideLandFilter = 'all';
+
+    // Lightbox story multi-photo viewer state
+    let activeStoryRideId = null;
+    let activeStoryPhotoIdx = 0;
+
+    // Load ridden rides from localStorage
+    function loadRidesStorage() {
+      try {
+        const storedRidden = localStorage.getItem('disney_ridden_rides_v1');
+        if (storedRidden) {
+          riddenRidesSet = new Set(JSON.parse(storedRidden));
+        }
+      } catch (e) {
+        console.warn("Could not read ridden rides:", e);
+        riddenRidesSet = new Set();
+      }
+    }
+
+    function saveRidesStorage() {
+      try {
+        localStorage.setItem('disney_ridden_rides_v1', JSON.stringify(Array.from(riddenRidesSet)));
+      } catch (e) {
+        console.warn("Storage full:", e);
+      }
+      updateRidesHeaderStats();
+    }
+
+    // Toggle ridden status
+    function toggleRideRidden(rideId, event) {
+      if (event) event.stopPropagation();
+      const ride = allDisneyRides.find(r => r.id === rideId);
+      if (!ride) return;
+
+      if (riddenRidesSet.has(rideId)) {
+        riddenRidesSet.delete(rideId);
+        showToast(`Unchecked ${ride.name}`);
+      } else {
+        riddenRidesSet.add(rideId);
+        showToast(`🎉 Conquered ${ride.name}!`);
+      }
+
+      saveRidesStorage();
+      renderAllRidesView();
+    }
+
+    // Filter handlers
+    function filterRidesPark(filterType) {
+      currentRideParkFilter = filterType;
+      document.querySelectorAll('.ride-park-pill').forEach(btn => {
+        btn.classList.remove('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+        btn.classList.add('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+      });
+
+      const activeBtn = document.getElementById('ride-filter-' + filterType);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+        activeBtn.classList.add('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+      }
+
+      renderAllRidesView();
+    }
+
+    function handleRideSearch(query) {
+      currentRideSearchQuery = (query || '').toLowerCase().trim();
+      renderAllRidesView();
+    }
+
+    function handleRideLandFilter(land) {
+      currentRideLandFilter = land;
+      renderAllRidesView();
+    }
+
+    // Header counter updater
+    function updateRidesHeaderStats() {
+      const activeRides = allDisneyRides.filter(r => !r.skip);
+      const totalEligible = activeRides.length; // 48 total (Guardians excluded)
+      const completedTotal = Array.from(riddenRidesSet).filter(id => {
+        const r = allDisneyRides.find(x => x.id === id);
+        return r && !r.skip;
+      }).length;
+
+      const headerCount = document.getElementById('headerRideCount');
+      if (headerCount) headerCount.textContent = `${completedTotal} / ${totalEligible} Rides`;
+
+      const dlRides = activeRides.filter(r => r.park === 'dl');
+      const dcaRides = activeRides.filter(r => r.park === 'dca');
+
+      const dlDone = dlRides.filter(r => riddenRidesSet.has(r.id)).length;
+      const dcaDone = dcaRides.filter(r => riddenRidesSet.has(r.id)).length;
+
+      const progressStat = document.getElementById('ridesProgressStat');
+      const pctStat = document.getElementById('ridesPctStat');
+      const bar = document.getElementById('allRidesProgressBar');
+      const dlStat = document.getElementById('dlRidesStat');
+      const dcaStat = document.getElementById('dcaRidesStat');
+      const badge = document.getElementById('ridesBadge');
+
+      const pct = Math.round((completedTotal / (totalEligible || 1)) * 100);
+
+      if (progressStat) progressStat.textContent = `${completedTotal} / ${totalEligible}`;
+      if (pctStat) pctStat.textContent = `${pct}% Conquered`;
+      if (bar) bar.style.width = `${pct}%`;
+      if (dlStat) dlStat.textContent = `${dlDone} / ${dlRides.length}`;
+      if (dcaStat) dcaStat.textContent = `${dcaDone} / ${dcaRides.length}`;
+
+      if (badge) {
+        if (completedTotal > 0) badge.classList.remove('hidden');
+        else badge.classList.add('hidden');
+      }
+    }
+
+    // Render Master Rides Directory with Instagram Story Check-Ins
+    function renderAllRidesView() {
+      const container = document.getElementById('allRidesListContainer');
+      if (!container) return;
+
+      updateRidesHeaderStats();
+
+      // Apply filters
+      let filtered = allDisneyRides.filter(ride => {
+        // Park filter
+        if (currentRideParkFilter === 'dl' && ride.park !== 'dl') return false;
+        if (currentRideParkFilter === 'dca' && ride.park !== 'dca') return false;
+        if (currentRideParkFilter === 'ridden' && !riddenRidesSet.has(ride.id)) return false;
+
+        // Land filter
+        if (currentRideLandFilter !== 'all' && ride.land !== currentRideLandFilter) return false;
+
+        // Search query
+        if (currentRideSearchQuery) {
+          const matchName = ride.name.toLowerCase().includes(currentRideSearchQuery);
+          const matchLand = ride.land.toLowerCase().includes(currentRideSearchQuery);
+          if (!matchName && !matchLand) return false;
+        }
+
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="glass-card rounded-2xl p-8 text-center space-y-2">
+            <div class="w-10 h-10 rounded-xl bg-cyan-400/10 text-cyan-400 flex items-center justify-center mx-auto text-xl">
+              <i class="ph-bold ph-ticket"></i>
+            </div>
+            <h4 class="text-sm font-bold text-white">No rides matching your search</h4>
+            <p class="text-xs text-slate-400">Try switching filters or clearing the search box.</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Group rides by Land
+      const landGroups = {};
+      filtered.forEach(ride => {
+        if (!landGroups[ride.land]) landGroups[ride.land] = [];
+        landGroups[ride.land].push(ride);
+      });
+
+      container.innerHTML = Object.entries(landGroups).map(([landName, ridesInLand]) => {
+        const parkBadge = ridesInLand[0].park === 'dl' ? '🏰 Disneyland' : '🎡 DCA';
+        const parkBadgeColor = ridesInLand[0].park === 'dl' ? 'text-amber-300 border-amber-400/30 bg-amber-500/10' : 'text-cyan-300 border-cyan-400/30 bg-cyan-500/10';
+
+        const ridesHtml = ridesInLand.map(ride => {
+          const isDone = riddenRidesSet.has(ride.id);
+          const checkin = checkinData[ride.id];
+          const photos = (checkin && Array.isArray(checkin.photos)) ? checkin.photos : [];
+
+          // Badges for LLMP / Single Rider
+          let badgesHtml = '';
+          if (ride.llmp) {
+            badgesHtml += `<span class="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[9px] font-mono font-semibold border border-purple-500/30 flex items-center gap-0.5"><i class="ph-bold ph-lightning"></i> LLMP</span>`;
+          }
+          if (ride.singlePass) {
+            badgesHtml += `<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-mono font-semibold border border-amber-500/30">$ Single Pass</span>`;
+          }
+          if (ride.singleRider) {
+            badgesHtml += `<span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-mono font-semibold border border-emerald-500/30">Single Rider</span>`;
+          }
+
+          // Special card for Guardians (Skipped)
+          if (ride.skip) {
+            return `
+              <div class="glass-card rounded-2xl p-3 border-rose-500/25 bg-rose-950/20 opacity-75 space-y-1.5">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs">
+                      <i class="ph-bold ph-prohibit"></i>
+                    </span>
+                    <div>
+                      <h4 class="text-xs font-bold text-slate-300 line-through">${ride.name}</h4>
+                      <span class="text-[10px] font-mono text-rose-400 font-semibold">SKIPPED BY REQUEST (Severe Drop Factor)</span>
+                    </div>
+                  </div>
+                  <span class="text-[9px] text-slate-400 font-mono">DCA</span>
+                </div>
+                <p class="text-[11px] text-slate-400 pl-8 leading-snug">
+                  Instead, enjoy <strong class="text-cyan-300">WEB SLINGERS</strong>, <strong class="text-cyan-300">Soarin'</strong>, or an extra spin on <strong class="text-cyan-300">Incredicoaster / Radiator Springs Racers</strong>!
+                </p>
+              </div>
+            `;
+          }
+
+          // Instagram Story Check-In Section
+          let storiesHtml = '';
+          if (photos.length > 0) {
+            const latestPhoto = photos[photos.length - 1];
+            const bubblesHtml = photos.map((p, pIdx) => `
+              <div onclick="openRideStoryLightbox('${ride.id}', ${pIdx})" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect group">
+                <div class="w-12 h-12 rounded-full story-ring-gradient p-[2px] shadow-md group-hover:scale-105 transition-transform">
+                  <div class="w-full h-full bg-disney-midnight rounded-full p-[2px]">
+                    <img src="${p.dataUrl}" alt="Story" class="w-full h-full object-cover rounded-full">
+                  </div>
+                </div>
+                <span class="text-[9px] font-mono text-slate-300 mt-1 truncate max-w-[48px]">Story ${pIdx + 1}</span>
+              </div>
+            `).join('');
+
+            storiesHtml = `
+              <div class="mt-2.5 space-y-2 pt-2 border-t border-white/5">
+                <!-- Instagram Story Hero Preview -->
+                <div onclick="openRideStoryLightbox('${ride.id}', ${photos.length - 1})" class="relative rounded-2xl overflow-hidden group cursor-pointer tap-effect border border-white/10 shadow-lg">
+                  <img src="${latestPhoto.dataUrl}" alt="${ride.name} Story" class="w-full h-36 object-cover group-hover:scale-102 transition-transform duration-300">
+                  <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-between p-3">
+                    <div class="flex items-center justify-between">
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-bold text-white border border-white/20 font-mono">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        ${photos.length} Stor${photos.length > 1 ? 'ies' : 'y'}
+                      </span>
+                      <button onclick="deleteRideStoryPhoto('${ride.id}', '${latestPhoto.id}', event)" class="w-6 h-6 rounded-full bg-black/60 backdrop-blur-md text-slate-300 hover:text-rose-400 flex items-center justify-center text-xs tap-effect" title="Delete latest">
+                        <i class="ph-bold ph-trash"></i>
+                      </button>
+                    </div>
+                    <div>
+                      <p class="text-[10px] text-amber-300 font-mono flex items-center gap-1">
+                        <i class="ph-bold ph-clock"></i> ${latestPhoto.checkinTimestamp}
+                      </p>
+                      <p class="text-xs font-bold text-white tracking-tight">Tap to view full story ➔</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Instagram Highlight Avatars & Add Story Bubble -->
+                <div class="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1">
+                  <!-- Add Photo Bubble -->
+                  <div onclick="triggerRideStoryCapture('${ride.id}')" class="flex-shrink-0 flex flex-col items-center cursor-pointer tap-effect">
+                    <div class="w-12 h-12 rounded-full border-2 border-dashed border-amber-400/60 bg-amber-400/5 flex items-center justify-center">
+                      <div class="w-10 h-10 rounded-full bg-disney-midnight flex items-center justify-center text-amber-400">
+                        <i class="ph-bold ph-plus text-base"></i>
+                      </div>
+                    </div>
+                    <span class="text-[9px] text-amber-400 font-semibold mt-1">Add Story</span>
+                  </div>
+                  ${bubblesHtml}
+                </div>
+              </div>
+            `;
+          } else {
+            storiesHtml = `
+              <div class="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between">
+                <button onclick="triggerRideStoryCapture('${ride.id}')" class="tap-effect inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-disney-card to-slate-800 border border-white/10 hover:border-amber-400/40 text-xs font-semibold text-slate-200 group">
+                  <div class="w-5 h-5 rounded-full story-ring-gradient p-[1px] flex items-center justify-center">
+                    <div class="w-full h-full bg-disney-midnight rounded-full flex items-center justify-center text-white text-[10px]">
+                      <i class="ph-bold ph-camera"></i>
+                    </div>
+                  </div>
+                  <span>Add Instagram Story</span>
+                </button>
+                <span class="text-[10px] text-slate-400 font-mono">${ride.intensity}</span>
+              </div>
+            `;
+          }
+
+          return `
+            <div class="glass-card rounded-2xl p-3.5 space-y-2 border-white/10 ${isDone ? 'border-emerald-500/35 bg-disney-midnight/90' : 'hover:border-white/20'}" data-ride-id="${ride.id}">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-3 flex-1">
+                  <!-- Checkbox Circle -->
+                  <button onclick="toggleRideRidden('${ride.id}', event)" class="w-7 h-7 rounded-full flex items-center justify-center transition-all ${isDone ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 text-disney-midnight shadow-md shadow-emerald-500/20' : 'border-2 border-slate-600 bg-disney-midnight hover:border-amber-400 text-transparent'}">
+                    <i class="ph-bold ph-check text-base ${isDone ? 'block' : ''}"></i>
+                  </button>
+                  <div class="flex-1">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <h4 class="text-xs font-bold ${isDone ? 'text-emerald-300' : 'text-white'}">${ride.name}</h4>
+                      ${isDone ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-bold font-mono">RIDDEN</span>' : ''}
+                    </div>
+                    <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                      ${badgesHtml}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              ${storiesHtml}
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="space-y-2">
+            <!-- Land Header -->
+            <div class="flex items-center justify-between px-1 pt-1">
+              <h3 class="text-xs font-extrabold text-white flex items-center gap-1.5">
+                <i class="ph-fill ph-compass text-amber-400"></i> ${landName}
+              </h3>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full border ${parkBadgeColor} font-semibold">${parkBadge}</span>
+            </div>
+            <div class="space-y-2">
+              ${ridesHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Capture photo for Ride Story
+    let activeRideForStory = null;
+    function triggerRideStoryCapture(rideId) {
+      activeRideForStory = rideId;
+      const input = document.getElementById('generalPhotoPicker');
+      input.value = '';
+      input.click();
+    }
+
+    // Story Lightbox logic
+    function openRideStoryLightbox(rideId, photoIdx = 0) {
+      const checkin = checkinData[rideId];
+      if (!checkin || !Array.isArray(checkin.photos) || !checkin.photos.length) return;
+
+      activeStoryRideId = rideId;
+      activeStoryPhotoIdx = Math.max(0, Math.min(photoIdx, checkin.photos.length - 1));
+
+      updateStoryLightboxUI();
+      document.getElementById('photoLightboxModal').classList.remove('hidden');
+    }
+
+    function updateStoryLightboxUI() {
+      const checkin = checkinData[activeStoryRideId];
+      if (!checkin || !Array.isArray(checkin.photos) || !checkin.photos[activeStoryPhotoIdx]) {
+        closeLightbox(null, true);
+        return;
+      }
+
+      const photo = checkin.photos[activeStoryPhotoIdx];
+      const img = document.getElementById('lightboxImage');
+      const title = document.getElementById('lightboxTitle');
+      const time = document.getElementById('lightboxTime');
+      const counter = document.getElementById('lightboxStoryCounter');
+      const barsContainer = document.getElementById('storyProgressBars');
+      const deleteBtn = document.getElementById('lightboxDeleteBtn');
+
+      title.textContent = checkin.title || 'Disney Story';
+      time.textContent = photo.checkinTimestamp || 'Captured Today';
+      img.src = photo.dataUrl;
+
+      if (counter) counter.textContent = `Story ${activeStoryPhotoIdx + 1} of ${checkin.photos.length}`;
+
+      // Progress bars segment
+      if (barsContainer) {
+        barsContainer.innerHTML = checkin.photos.map((p, idx) => `
+          <div class="h-1 flex-1 bg-white/25 rounded-full overflow-hidden">
+            <div class="h-full bg-white rounded-full transition-all" style="width: ${idx <= activeStoryPhotoIdx ? '100%' : '0%'}"></div>
+          </div>
+        `).join('');
+      }
+
+      deleteBtn.onclick = () => {
+        deleteRideStoryPhoto(activeStoryRideId, photo.id);
+      };
+    }
+
+    function prevLightboxStory(event) {
+      if (event) event.stopPropagation();
+      const checkin = checkinData[activeStoryRideId];
+      if (!checkin || !Array.isArray(checkin.photos) || checkin.photos.length <= 1) return;
+      activeStoryPhotoIdx = (activeStoryPhotoIdx - 1 + checkin.photos.length) % checkin.photos.length;
+      updateStoryLightboxUI();
+    }
+
+    function nextLightboxStory(event) {
+      if (event) event.stopPropagation();
+      const checkin = checkinData[activeStoryRideId];
+      if (!checkin || !Array.isArray(checkin.photos) || checkin.photos.length <= 1) return;
+      activeStoryPhotoIdx = (activeStoryPhotoIdx + 1) % checkin.photos.length;
+      updateStoryLightboxUI();
+    }
+
+    function deleteRideStoryPhoto(rideId, photoId, event) {
+      if (event) event.stopPropagation();
+      const checkin = checkinData[rideId];
+      if (!checkin || !Array.isArray(checkin.photos)) return;
+
+      if (confirm('Delete this story photo?')) {
+        checkin.photos = checkin.photos.filter(p => p.id !== photoId);
+        if (checkin.photos.length === 0) {
+          delete checkinData[rideId];
+          closeLightbox(null, true);
+        } else {
+          activeStoryPhotoIdx = Math.max(0, activeStoryPhotoIdx - 1);
+          updateStoryLightboxUI();
+        }
+        saveStorage();
+        renderAllRidesView();
+        renderTimeline();
+        renderAlbumView();
+        showToast('Story photo removed');
+      }
+    }
+
+    // Override the general file picker handler to support both ride story check-ins & regular card photos
+    document.getElementById('generalPhotoPicker').addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      showToast("Compressing & saving story...");
+      try {
+        const compressed = await compressImageFile(file, 850, 850, 0.72);
+        const now = new Date();
+        const timestamp = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        if (activeRideForStory) {
+          // Ride Story Mode
+          const ride = allDisneyRides.find(r => r.id === activeRideForStory);
+          const rideName = ride ? ride.name : 'Disney Ride';
+
+          if (!checkinData[activeRideForStory]) {
+            checkinData[activeRideForStory] = {
+              title: rideName,
+              photos: []
+            };
+          } else if (!Array.isArray(checkinData[activeRideForStory].photos)) {
+            checkinData[activeRideForStory].photos = [];
+          }
+
+          checkinData[activeRideForStory].title = rideName;
+          checkinData[activeRideForStory].photos.push({
+            id: 'p-' + Date.now(),
+            dataUrl: compressed,
+            checkinTimestamp: timestamp,
+            rawTime: Date.now()
+          });
+
+          // Automatically mark ride as completed when photo is added
+          riddenRidesSet.add(activeRideForStory);
+          saveRidesStorage();
+          saveStorage();
+
+          renderAllRidesView();
+          renderAlbumView();
+          showToast(`📸 Added Instagram story to ${rideName}!`);
+          activeRideForStory = null;
+        } else if (photoTargetType === 'card' && photoTargetId) {
+          // Plan / Timeline Story Mode (matching Ride Story capabilities)
+          const card = disneyCards.find(c => c.id === photoTargetId);
+          const cardTitle = card ? card.title : 'Disney Stop';
+
+          if (!checkinData[photoTargetId]) {
+            checkinData[photoTargetId] = {
+              title: cardTitle,
+              photos: []
+            };
+          } else if (!Array.isArray(checkinData[photoTargetId].photos)) {
+            const existingUrl = checkinData[photoTargetId].dataUrl;
+            checkinData[photoTargetId].photos = existingUrl ? [{
+              id: 'p-legacy-' + Date.now(),
+              dataUrl: existingUrl,
+              checkinTimestamp: checkinData[photoTargetId].timestamp || timestamp,
+              rawTime: Date.now() - 1000
+            }] : [];
+          }
+
+          checkinData[photoTargetId].title = cardTitle;
+          checkinData[photoTargetId].photos.push({
+            id: 'p-' + Date.now(),
+            dataUrl: compressed,
+            checkinTimestamp: timestamp,
+            rawTime: Date.now()
+          });
+
+          saveStorage();
+          renderTimeline();
+          renderAlbumView();
+          showToast(`📸 Added Instagram story to ${cardTitle}!`);
+          photoTargetType = null;
+          photoTargetId = null;
+        } else if (photoTargetType === 'food' && photoTargetId) {
+          const img = document.getElementById('img-' + photoTargetId);
+          const badge = document.getElementById('badge-' + photoTargetId);
+          if (img) img.src = compressed;
+          if (badge) badge.classList.remove('hidden');
+
+          checkinData['food-' + photoTargetId] = {
+            title: photoTargetId.replace('-', ' ').toUpperCase(),
+            dataUrl: compressed,
+            timestamp: timestamp,
+            rawTime: Date.now()
+          };
+          saveStorage();
+          renderAlbumView();
+          showToast("Dining photo snapped & saved! 🍔✨");
+        }
+      } catch (err) {
+        console.error(err);
+        showToast("Error processing photo");
+      }
+    });
+
+    // Modified Album Renderer to aggregate individual multi-photo stories
+    function renderAlbumView() {
+      const grid = document.getElementById('albumGrid');
+      const empty = document.getElementById('albumEmptyState');
+      const countStat = document.getElementById('albumCountStat');
+      const remStat = document.getElementById('albumRemainingStat');
+      const storageStat = document.getElementById('albumStorageStat');
+      const badge = document.getElementById('albumBadge');
+
+      const flattenedPhotos = [];
+      Object.entries(checkinData).forEach(([slotId, entry]) => {
+        if (entry) {
+          if (Array.isArray(entry.photos)) {
+            entry.photos.forEach((p, idx) => {
+              flattenedPhotos.push({
+                slotId,
+                title: entry.title || 'Disney Memory',
+                dataUrl: p.dataUrl,
+                timestamp: p.checkinTimestamp || 'Today',
+                rawTime: p.rawTime || 0,
+                photoId: p.id
+              });
+            });
+          } else if (entry.dataUrl) {
+            flattenedPhotos.push({
+              slotId,
+              title: entry.title || 'Disney Memory',
+              dataUrl: entry.dataUrl,
+              timestamp: entry.timestamp || 'Today',
+              rawTime: entry.rawTime || 0
+            });
+          }
+        }
+      });
+
+      const count = flattenedPhotos.length;
+      if (countStat) countStat.textContent = count;
+      if (remStat) remStat.textContent = Math.max(0, 48 - count);
+
+      const raw = JSON.stringify(checkinData);
+      const kb = Math.round(new Blob([raw]).size / 1024);
+      if (storageStat) storageStat.textContent = `${kb} KB`;
+
+      if (badge) {
+        if (count > 0) badge.classList.remove('hidden');
+        else badge.classList.add('hidden');
+      }
+
+      if (count === 0) {
+        if (grid) grid.innerHTML = '';
+        if (empty) empty.classList.remove('hidden');
+        return;
+      }
+
+      if (empty) empty.classList.add('hidden');
+      flattenedPhotos.sort((a, b) => (b.rawTime || 0) - (a.rawTime || 0));
+
+      if (grid) {
+        grid.innerHTML = flattenedPhotos.map(item => `
+          <div class="glass-card rounded-2xl overflow-hidden border-white/10 p-2 space-y-2">
+            <div class="relative rounded-xl overflow-hidden group cursor-pointer tap-effect" onclick="openLightboxManual('${item.dataUrl}', '${item.title.replace(/'/g, "\\'")}', '${item.timestamp}')">
+              <img src="${item.dataUrl}" class="w-full h-36 object-cover" alt="${item.title}">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2">
+                <span class="text-[10px] font-mono text-amber-300 font-bold truncate">${item.timestamp}</span>
+              </div>
+            </div>
+            <div class="px-1 flex items-center justify-between">
+              <h4 class="text-xs font-bold text-white truncate">${item.title}</h4>
+              <button onclick="deleteSingleAlbumPhoto('${item.slotId}', '${item.photoId || ''}', event)" class="text-slate-400 hover:text-rose-400 text-xs">
+                <i class="ph-bold ph-trash"></i>
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function deleteSingleAlbumPhoto(slotId, photoId, event) {
+      if (event) event.stopPropagation();
+      const entry = checkinData[slotId];
+      if (!entry) return;
+
+      if (confirm('Delete this photo story?')) {
+        if (Array.isArray(entry.photos) && photoId) {
+          entry.photos = entry.photos.filter(p => p.id !== photoId);
+          if (entry.photos.length === 0) delete checkinData[slotId];
+        } else {
+          delete checkinData[slotId];
+        }
+        saveStorage();
+        renderAllRidesView();
+        renderTimeline();
+        renderAlbumView();
+        showToast('Photo removed');
+      }
+    }
+
+    // App Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStorage();
+      loadRidesStorage();
+      renderAllRidesView();
+      renderTimeline();
+      renderLLMPDeck();
+      renderAlbumView();
+      updateAnaheimClock();
+    });
+  </script>
+</body>
+</html>
