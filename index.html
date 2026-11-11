@@ -13,10 +13,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;850&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Leaflet CSS & JS for Interactive Disney Map -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
   <!-- HEIC to JPEG Converter for iPhone / Samsung Camera Photos -->
   <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 
@@ -88,23 +84,6 @@
     }
     .llmp-glow {
       box-shadow: 0 0 25px rgba(251, 191, 36, 0.15);
-    }
-    /* Leaflet popup styling */
-    .leaflet-popup-content-wrapper {
-      background: rgba(13, 17, 30, 0.95);
-      backdrop-filter: blur(12px);
-      color: #f1f5f9;
-      border: 1px solid rgba(251, 191, 36, 0.4);
-      border-radius: 14px;
-      padding: 4px;
-      box-shadow: 0 12px 30px rgba(0,0,0,0.6);
-    }
-    .leaflet-popup-tip {
-      background: rgba(13, 17, 30, 0.95);
-    }
-    .leaflet-popup-content {
-      margin: 8px 10px;
-      line-height: 1.4;
     }
     /* Instagram Story Gradient Rings & Story Cards */
     .story-ring-gradient {
@@ -535,8 +514,8 @@
                 <strong class="text-amber-200">Must Get:</strong> Beef Birria Toasted Cheese Sandwich with consommé soup for dipping & Raspberry Rose Mickey Macaron. Mobile order early for a 10:30 AM brunch slot!
               </p>
               <div class="flex items-center justify-between pt-2 border-t border-white/5 text-[11px]">
-                <button onclick="flyToMapStop('jollyholiday')" class="text-amber-400 font-semibold hover:underline flex items-center gap-1 tap-effect">
-                  <i class="ph-bold ph-map-pin"></i> View on Map
+                <button onclick="addQuickTodo('Get Birria Grilled Cheese @ Jolly Holiday', 'Snacks')" class="text-amber-400 font-semibold hover:underline flex items-center gap-1 tap-effect">
+                  <i class="ph-bold ph-plus-circle"></i> Add to To-Do
                 </button>
                 <a href="https://disneyland.disney.go.com/dining/disneyland/jolly-holiday-bakery-cafe/" target="_blank" class="text-cyan-400 hover:text-white flex items-center gap-1">
                   Mobile Order <i class="ph-bold ph-arrow-up-right"></i>
@@ -568,8 +547,8 @@
                 <strong class="text-cyan-200">Must Get:</strong> Quantum Pretzel with sharp cheddar craft beer cheese sauce & Not So Little Chicken Sandwich. Air-conditioned indoor seating.
               </p>
               <div class="flex items-center justify-between pt-2 border-t border-white/5 text-[11px]">
-                <button onclick="flyToMapStop('pymtest')" class="text-amber-400 font-semibold hover:underline flex items-center gap-1 tap-effect">
-                  <i class="ph-bold ph-map-pin"></i> View on Map
+                <button onclick="addQuickTodo('Order Quantum Pretzel @ Pym Test Kitchen', 'Snacks')" class="text-amber-400 font-semibold hover:underline flex items-center gap-1 tap-effect">
+                  <i class="ph-bold ph-plus-circle"></i> Add to To-Do
                 </button>
                 <a href="https://disneyland.disney.go.com/dining/disney-california-adventure/pym-test-kitchen/" target="_blank" class="text-cyan-400 hover:text-white flex items-center gap-1">
                   Mobile Order <i class="ph-bold ph-arrow-up-right"></i>
@@ -601,8 +580,8 @@
                 <strong class="text-amber-200">Must Get:</strong> Chili Cone Queso (beef chili & cheddar in bread cone) at Cone #3, and warm churro bites with chocolate sauce at Cone #1.
               </p>
               <div class="flex items-center justify-between pt-2 border-t border-white/5 text-[11px]">
-                <button onclick="flyToMapStop('cozycone')" class="text-amber-400 font-semibold hover:underline flex items-center gap-1 tap-effect">
-                  <i class="ph-bold ph-map-pin"></i> View on Map
+                <button onclick="addQuickTodo('Eat Chili Cone Queso @ Cozy Cone', 'Snacks')" class="text-amber-400 font-semibold hover:underline flex items-center gap-1 tap-effect">
+                  <i class="ph-bold ph-plus-circle"></i> Add to To-Do
                 </button>
                 <a href="https://disneyland.disney.go.com/dining/disney-california-adventure/cozy-cone-motel/" target="_blank" class="text-cyan-400 hover:text-white flex items-center gap-1">
                   Directions <i class="ph-bold ph-arrow-up-right"></i>
@@ -626,116 +605,77 @@
               </div>
             </div>
             <div class="p-3.5 space-y-2">
-              <div class="flex items-center justify-between">
-                <h3 class="text-sm font-bold text-white">Bengal Barbecue (Adventureland)</h3>
-                <span class="text-xs font-mono text-purple-400 font-semibold">DL Night Fuel</span>
-              </div>
-              <p class="text-xs text-slate-300 leading-relaxed">
-                <strong class="text-purple-200">Must Get:</strong> Banyan Beef Skewer (hot and spicy) and Safari Skewer (bacon-wrapped asparagus). Right across from Indiana Jones queue.
-              </p>
-              <div class="flex items-center justify-between pt-2 border-t border-white/5 text-[11px]">
-                <button onclick="flyToMapStop('bengalbbq')" class="text-amber-400 font-semibold hover:underline flex items-center gap-1 tap-effect">
-                  <i class="ph-bold ph-map-pin"></i> View on Map
-                </button>
-                <a href="https://disneyland.disney.go.com/dining/disneyland/bengal-barbecue/" target="_blank" class="text-cyan-400 hover:text-white flex items-center gap-1">
-                  Mobile Order <i class="ph-bold ph-arrow-up-right"></i>
-                </a>
-              </div>
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold text-white">Bengal Barbecue (Adventureland)</h3>
+              <span class="text-xs font-mono text-purple-400 font-semibold">DL Night Fuel</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              <strong class="text-purple-200">Must Get:</strong> Banyan Beef Skewer (hot and spicy) and Safari Skewer (bacon-wrapped asparagus). Right across from Indiana Jones queue.
+            </p>
+            <div class="flex items-center justify-end pt-2 border-t border-white/5 text-[11px]">
+              <a href="https://disneyland.disney.go.com/dining/disneyland/bengal-barbecue/" target="_blank" class="text-cyan-400 hover:text-white flex items-center gap-1">
+                Mobile Order <i class="ph-bold ph-arrow-up-right"></i>
+              </a>
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- ================= TAB 4: INTERACTIVE DISNEY RESORT MAP ================= -->
-      <section id="view-map" class="tab-view hidden space-y-3">
-        <div class="px-1 flex items-center justify-between">
-          <div>
-            <h2 class="text-base font-extrabold text-white flex items-center gap-2">
-              <i class="ph-fill ph-map-trifold text-amber-400 text-lg"></i> Resort GPS Map
-            </h2>
-            <p class="text-xs text-slate-400">Headliners & mobile order pins across DL & DCA</p>
+    <!-- ================= TAB 4: DISNEY TRIP TO-DO LIST ================= -->
+    <section id="view-todo" class="tab-view hidden space-y-3.5">
+      <!-- Header & Create Button -->
+      <div class="glass-card rounded-2xl p-3.5 border-amber-400/30 bg-gradient-to-br from-amber-950/30 via-disney-card to-purple-950/20 shadow-xl space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-400 to-amber-300 flex items-center justify-center text-disney-midnight font-black shadow-md shadow-amber-400/20">
+              <i class="ph-bold ph-check-square text-base"></i>
+            </div>
+            <div>
+              <h2 class="text-sm font-extrabold text-white flex items-center gap-1.5">
+                Disney To-Do Bucket List
+              </h2>
+              <p class="text-[10px] text-slate-400">Must-do snacks, merch, photo ops & sights</p>
+            </div>
           </div>
-          <button onclick="resetResortMap()" class="tap-effect text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-white/10 flex items-center gap-1 font-semibold">
-            <i class="ph-bold ph-arrows-out"></i> Center Both Parks
+          <button onclick="openTodoModal()" class="text-[11px] font-bold text-disney-midnight bg-gradient-to-r from-amber-400 to-amber-300 hover:brightness-110 px-3 py-1.5 rounded-xl tap-effect flex items-center gap-1 shadow-md shadow-amber-400/20">
+            <i class="ph-bold ph-plus-circle text-sm"></i> Add To-Do
           </button>
         </div>
 
-        <!-- Layer toggle / open in Google Maps -->
-        <div class="glass-card rounded-2xl p-2.5 flex items-center justify-between gap-2 border border-white/10">
-          <div class="flex items-center gap-1 bg-disney-midnight p-1 rounded-xl border border-white/10 text-xs">
-            <button id="btn-map-roadmap" onclick="setMapLayer('roadmap')" class="px-2.5 py-1 rounded-lg font-bold bg-amber-400 text-disney-midnight tap-effect transition-all flex items-center gap-1">
-              <i class="ph-bold ph-map-pin"></i> Vector
-            </button>
-            <button id="btn-map-satellite" onclick="setMapLayer('satellite')" class="px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white tap-effect transition-all flex items-center gap-1">
-              <i class="ph-bold ph-planet text-cyan-400"></i> Satellite
-            </button>
+        <!-- Progress Summary -->
+        <div class="pt-2 border-t border-white/10 flex items-center justify-between text-xs">
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-300 font-semibold">Completed:</span>
+            <span id="todoProgressCount" class="font-mono font-bold text-amber-300">0 / 0</span>
           </div>
-          <a id="btn-open-google-maps" href="https://www.google.com/maps/search/Disneyland+Resort+Anaheim" target="_blank" class="tap-effect text-[11px] px-3 py-1.5 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 font-bold flex items-center gap-1 hover:bg-purple-500/30">
-            <i class="ph-bold ph-arrow-square-out text-sm"></i>
-            <span>Open in App</span>
-          </a>
+          <span id="todoProgressPct" class="font-mono text-[10px] text-cyan-300 font-bold">0%</span>
         </div>
-
-        <!-- Filter Chips -->
-        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs">
-          <button onclick="filterMapCategory('all')" id="map-chip-all" class="map-chip tap-effect flex-shrink-0 px-3 py-1 rounded-xl font-bold bg-amber-400 text-disney-midnight">
-            All (16)
-          </button>
-          <button onclick="filterMapCategory('dl')" id="map-chip-dl" class="map-chip tap-effect flex-shrink-0 px-3 py-1 rounded-xl font-semibold bg-disney-card text-slate-300 border border-white/10">
-            🏰 Disneyland
-          </button>
-          <button onclick="filterMapCategory('dca')" id="map-chip-dca" class="map-chip tap-effect flex-shrink-0 px-3 py-1 rounded-xl font-semibold bg-disney-card text-slate-300 border border-white/10">
-            🎡 DCA
-          </button>
-          <button onclick="filterMapCategory('food')" id="map-chip-food" class="map-chip tap-effect flex-shrink-0 px-3 py-1 rounded-xl font-semibold bg-disney-card text-slate-300 border border-white/10">
-            🍔 Food & Snack
-          </button>
+        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+          <div id="todoProgressBar" class="bg-gradient-to-r from-amber-400 via-purple-400 to-cyan-400 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
         </div>
+      </div>
 
-        <!-- Leaflet Map Container -->
-        <div class="glass-card rounded-2xl overflow-hidden border-white/15 p-1 relative shadow-2xl">
-          <div id="disneyLeafletMap" style="height: 380px; width: 100%; border-radius: 12px; z-index: 10;"></div>
-          <!-- Floating Legend -->
-          <div class="absolute bottom-3 left-3 z-20 glass-card px-2.5 py-1 rounded-lg border border-white/10 text-[10px] flex items-center gap-2 text-slate-300 pointer-events-none">
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> DL Headliners</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyan-400"></span> DCA Headliners</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-400"></span> Food</span>
-          </div>
-        </div>
+      <!-- Filter Chips -->
+      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs">
+        <button onclick="filterTodoCategory('all')" id="todo-filter-all" class="todo-filter-pill tap-effect flex-shrink-0 px-3 py-1.5 rounded-xl font-bold bg-amber-400 text-disney-midnight shadow-md shadow-amber-500/20">
+          All
+        </button>
+        <button onclick="filterTodoCategory('active')" id="todo-filter-active" class="todo-filter-pill tap-effect flex-shrink-0 px-3 py-1.5 rounded-xl font-semibold bg-disney-card text-slate-300 border border-white/10">
+          Pending
+        </button>
+        <button onclick="filterTodoCategory('completed')" id="todo-filter-completed" class="todo-filter-pill tap-effect flex-shrink-0 px-3 py-1.5 rounded-xl font-semibold bg-disney-card text-slate-300 border border-white/10">
+          Done
+        </button>
+      </div>
 
-        <!-- Quick Destination Cards below map -->
-        <div class="space-y-2 pt-1">
-          <h3 class="text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Tap to Focus Attraction</h3>
-          <div class="grid grid-cols-2 gap-2 text-left">
-            <button onclick="flyToMapStop('spacemtn')" class="tap-effect glass-card p-2.5 rounded-xl border-white/10 text-left hover:border-amber-400/40">
-              <div class="text-xs font-bold text-white truncate flex items-center gap-1"><i class="ph-bold ph-rocket-launch text-amber-400"></i> Space Mountain</div>
-              <div class="text-[10px] text-slate-400">Tomorrowland (Rope Drop)</div>
-            </button>
-            <button onclick="flyToMapStop('indy')" class="tap-effect glass-card p-2.5 rounded-xl border-white/10 text-left hover:border-amber-400/40">
-              <div class="text-xs font-bold text-white truncate flex items-center gap-1"><i class="ph-bold ph-compass text-amber-400"></i> Indiana Jones</div>
-              <div class="text-[10px] text-slate-400">Adventureland (LLMP #1)</div>
-            </button>
-            <button onclick="flyToMapStop('guardians')" class="tap-effect glass-card p-2.5 rounded-xl border-white/10 text-left hover:border-cyan-400/40">
-              <div class="text-xs font-bold text-white truncate flex items-center gap-1"><i class="ph-bold ph-skull text-cyan-400"></i> Guardians of Galaxy</div>
-              <div class="text-[10px] text-slate-400">Avengers Campus (DCA LL)</div>
-            </button>
-            <button onclick="flyToMapStop('carsracers')" class="tap-effect glass-card p-2.5 rounded-xl border-white/10 text-left hover:border-cyan-400/40">
-              <div class="text-xs font-bold text-white truncate flex items-center gap-1"><i class="ph-bold ph-car text-cyan-400"></i> Radiator Springs</div>
-              <div class="text-[10px] text-slate-400">Cars Land (Single Rider)</div>
-            </button>
-            <button onclick="flyToMapStop('rise')" class="tap-effect glass-card p-2.5 rounded-xl border-white/10 text-left hover:border-purple-400/40">
-              <div class="text-xs font-bold text-white truncate flex items-center gap-1"><i class="ph-bold ph-sword text-purple-400"></i> Rise of Resistance</div>
-              <div class="text-[10px] text-slate-400">Star Wars: Galaxy's Edge</div>
-            </button>
-            <button onclick="flyToMapStop('incredicoaster')" class="tap-effect glass-card p-2.5 rounded-xl border-white/10 text-left hover:border-cyan-400/40">
-              <div class="text-xs font-bold text-white truncate flex items-center gap-1"><i class="ph-bold ph-circle-dashed text-cyan-400"></i> Incredicoaster</div>
-              <div class="text-[10px] text-slate-400">Pixar Pier (DCA)</div>
-            </button>
-          </div>
-        </div>
-      </section>
+      <!-- To-Do Cards List Container -->
+      <div id="todoCardsContainer" class="space-y-3">
+        <!-- Dynamically populated from JS -->
+      </div>
+    </section>
 
-      <!-- ================= TAB 5: PHOTO SCRAPBOOK & MEMORIES ================= -->
+    <!-- ================= TAB 5: PHOTO SCRAPBOOK & MEMORIES ================= -->
       <section id="view-album" class="tab-view hidden space-y-3.5">
         <div class="px-1 flex items-center justify-between">
           <div>
@@ -813,9 +753,10 @@
         <span class="text-[10px] font-semibold tracking-tight mt-0.5">Dining</span>
       </button>
 
-      <button onclick="switchTab('map')" id="nav-map" class="nav-btn tap-effect flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-white transition-colors">
-        <i class="ph-bold ph-map-trifold text-xl"></i>
-        <span class="text-[10px] font-semibold tracking-tight mt-0.5">Map</span>
+      <button onclick="switchTab('todo')" id="nav-todo" class="nav-btn tap-effect flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-white transition-colors relative">
+        <i class="ph-bold ph-check-square text-xl"></i>
+        <span class="text-[10px] font-semibold tracking-tight mt-0.5">To-Do</span>
+        <span id="todoBadge" class="hidden absolute top-0.5 right-1 w-2 h-2 rounded-full bg-amber-400"></span>
       </button>
 
       <button onclick="switchTab('album')" id="nav-album" class="nav-btn tap-effect flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-white transition-colors relative">
@@ -930,66 +871,99 @@
           </div>
 
           <!-- Queue Strategy & Badge -->
-          <div class="grid grid-cols-2 gap-2.5">
-            <div>
-              <label class="block text-slate-400 font-semibold mb-1">Strategy Type</label>
-              <select id="editCardCategory" class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none">
-                <option value="ropedrop">Rope Drop Sprint (Standby)</option>
-                <option value="llmp">Lightning Lane Multi Pass</option>
-                <option value="single">Single Rider / Single Pass</option>
-                <option value="food">Mobile Order / Meal</option>
-                <option value="show">Fireworks / Night Spectacular</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-slate-400 font-semibold mb-1">Badge Tag</label>
-              <input type="text" id="editCardTag" placeholder="e.g. Standby Walk-On" class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none">
-            </div>
-          </div>
-
-          <!-- Description / Tips -->
+        <div class="grid grid-cols-2 gap-2.5">
           <div>
-            <label class="block text-slate-400 font-semibold mb-1">Queue Tips / LL Strategy</label>
-            <textarea id="editCardDesc" rows="2" placeholder="e.g. Walk through Frontierland castle bridge; ride before 9:30 AM to beat crowds..." class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none"></textarea>
-          </div>
-
-          <!-- Map Link -->
-          <div>
-            <label class="block text-slate-400 font-semibold mb-1">Link to Map Pin (Optional)</label>
-            <select id="editCardMapStop" class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none">
-              <option value="">None</option>
-              <option value="spacemtn">Space Mountain (Disneyland)</option>
-              <option value="indy">Indiana Jones Adventure (Disneyland)</option>
-              <option value="bigthunder">Big Thunder Mountain (Disneyland)</option>
-              <option value="pirates">Pirates of the Caribbean (Disneyland)</option>
-              <option value="matterhorn">Matterhorn Bobsleds (Disneyland)</option>
-              <option value="rise">Rise of the Resistance (Disneyland)</option>
-              <option value="castle">Sleeping Beauty Castle (Disneyland)</option>
-              <option value="guardians">Guardians of the Galaxy (DCA)</option>
-              <option value="carsracers">Radiator Springs Racers (DCA)</option>
-              <option value="incredicoaster">Incredicoaster (DCA)</option>
-              <option value="soarin">Soarin' Around the World (DCA)</option>
-              <option value="toystory">Toy Story Midway Mania (DCA)</option>
-              <option value="webslingers">WEB SLINGERS (DCA)</option>
-              <option value="jollyholiday">Jolly Holiday Bakery</option>
-              <option value="pymtest">Pym Test Kitchen</option>
-              <option value="cozycone">Cozy Cone Motel</option>
+            <label class="block text-slate-400 font-semibold mb-1">Strategy Type</label>
+            <select id="editCardCategory" class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none">
+              <option value="ropedrop">Rope Drop Sprint (Standby)</option>
+              <option value="llmp">Lightning Lane Multi Pass</option>
+              <option value="single">Single Rider / Single Pass</option>
+              <option value="food">Mobile Order / Meal</option>
+              <option value="show">Fireworks / Night Spectacular</option>
             </select>
           </div>
-
-          <div class="pt-2 flex items-center gap-2">
-            <button type="submit" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-300 text-disney-midnight font-bold tap-effect shadow-md shadow-amber-400/20 text-xs">
-              Save & Sort Timeline
-            </button>
-            <button type="button" onclick="closeCardModal(null, true)" class="px-4 py-2.5 rounded-xl bg-disney-card border border-white/10 text-slate-300 font-semibold tap-effect text-xs">
-              Cancel
-            </button>
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Badge Tag</label>
+            <input type="text" id="editCardTag" placeholder="e.g. Standby Walk-On" class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none">
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
 
-    <!-- ================= MODAL: SIMULATE BOOKING LLMP ================= -->
+        <!-- Description / Tips -->
+        <div>
+          <label class="block text-slate-400 font-semibold mb-1">Queue Tips / LL Strategy</label>
+          <textarea id="editCardDesc" rows="2" placeholder="e.g. Walk through Frontierland castle bridge; ride before 9:30 AM to beat crowds..." class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none"></textarea>
+        </div>
+
+        <div class="pt-2 flex items-center gap-2">
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-300 text-disney-midnight font-bold tap-effect shadow-md shadow-amber-400/20 text-xs">
+            Save & Sort Timeline
+          </button>
+          <button type="button" onclick="closeCardModal(null, true)" class="px-4 py-2.5 rounded-xl bg-disney-card border border-white/10 text-slate-300 font-semibold tap-effect text-xs">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: ADD / EDIT TO-DO ITEM ================= -->
+  <div id="todoEditorModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4" onclick="closeTodoModal(event)">
+    <div class="w-full max-w-md bg-disney-night border-t sm:border border-white/15 rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between border-b border-white/10 pb-3">
+        <h3 id="modalTodoTitle" class="text-base font-extrabold text-white flex items-center gap-2">
+          <i class="ph-bold ph-check-square text-amber-400"></i> <span>Add To-Do Item</span>
+        </h3>
+        <button onclick="closeTodoModal(null, true)" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-300 tap-effect">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleSaveTodo(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="editTodoId" value="">
+
+        <!-- Name of the thing to do -->
+        <div>
+          <label class="block text-slate-400 font-semibold mb-1">What would you like to do?</label>
+          <input type="text" id="editTodoTitle" placeholder="e.g. Get Mickey Pretzel with Cheese" required class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white font-bold focus:border-amber-400 outline-none">
+        </div>
+
+        <!-- Category & Location -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Category</label>
+            <select id="editTodoCategory" class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none">
+              <option value="Snack">🍿 Snack / Treat</option>
+              <option value="Merch">🛍️ Souvenir / Merch</option>
+              <option value="Photo Op">📸 Photo Spot</option>
+              <option value="Show">🎆 Show / Parade</option>
+              <option value="Experience">✨ Magical Moment</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Park / Location</label>
+            <input type="text" id="editTodoLocation" placeholder="e.g. Adventureland / DCA" class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none">
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="block text-slate-400 font-semibold mb-1">Notes / Details (Optional)</label>
+          <textarea id="editTodoNotes" rows="2" placeholder="e.g. Check before 4:00 PM; ask for extra cinnamon sugar..." class="w-full bg-disney-card border border-white/10 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-none"></textarea>
+        </div>
+
+        <div class="pt-2 flex items-center gap-2">
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-300 text-disney-midnight font-bold tap-effect shadow-md shadow-amber-400/20 text-xs">
+            Save To-Do Card
+          </button>
+          <button type="button" onclick="closeTodoModal(null, true)" class="px-4 py-2.5 rounded-xl bg-disney-card border border-white/10 text-slate-300 font-semibold tap-effect text-xs">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: SIMULATE BOOKING LLMP ================= -->
     <div id="bookLLModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4" onclick="closeBookLLModal(event)">
       <div class="w-full max-w-md bg-disney-night border-t sm:border border-white/15 rounded-t-3xl sm:rounded-2xl p-5 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between border-b border-white/10 pb-3">
@@ -1123,6 +1097,45 @@
     let simulatedLLMPPasses = [];
     let nextPullTime = null;
 
+    // To-Do items state
+    let todoItems = [];
+    let currentTodoFilter = 'all';
+
+    const defaultTodoList = [
+      {
+        id: 'todo-1',
+        title: 'Get Mickey Gingerbread / Macaron',
+        category: 'Snack',
+        location: 'Jolly Holiday Bakery Cafe',
+        notes: 'Mobile order during morning rope drop for ~10:30 AM pickup.',
+        completed: false
+      },
+      {
+        id: 'todo-2',
+        title: 'Darth Vader / Kylo Ren Photo Op',
+        category: 'Photo Op',
+        location: 'Star Wars: Galaxy\'s Edge',
+        notes: 'Snap photo in front of the TIE Echelon or Millennium Falcon!',
+        completed: false
+      },
+      {
+        id: 'todo-3',
+        title: 'Chili Cone Queso in Bread Cone',
+        category: 'Snack',
+        location: 'Cozy Cone Motel #3 (Cars Land)',
+        notes: 'Perfect midday fuel while in DCA.',
+        completed: false
+      },
+      {
+        id: 'todo-4',
+        title: 'Watch World of Color or Castle Fireworks',
+        category: 'Show',
+        location: 'Main Street / Paradise Bay',
+        notes: 'Grab a good viewing spot 30 mins before showtime.',
+        completed: false
+      }
+    ];
+
     // Default Thursday Rope Drop & LLMP Master Itinerary (Drop-Free & Guardians Skipped)
     const defaultDisneyCards = [
       {
@@ -1133,8 +1146,7 @@
         title: 'Harbor Blvd Security & Turnstiles',
         category: 'ropedrop',
         tag: 'Arrival',
-        desc: 'Clear security bag check by 7:10 AM. Join the turnstile line at Disneyland Main Entrance. Turnstiles usually open at 7:20–7:25 AM.',
-        mapStop: 'castle'
+        desc: 'Clear security bag check by 7:10 AM. Join the turnstile line at Disneyland Main Entrance. Turnstiles usually open at 7:20–7:25 AM.'
       },
       {
         id: 'c-turnstile-llmp',
@@ -1142,8 +1154,7 @@
         sortTime: '07:25',
         timeLabel: '7:25 AM – 7:35 AM',
         title: 'Gate Tap-In & Book LLMP #1 ⚡',
-        desc: 'THE MOMENT your park ticket scans at the turnstile, open the Disneyland app immediately and book your 1st Multi Pass (Indiana Jones Adventure for ~9:45 AM). Then brisk walk down Main Street to the Central Plaza rope!',
-        mapStop: 'indy'
+        desc: 'THE MOMENT your park ticket scans at the turnstile, open the Disneyland app immediately and book your 1st Multi Pass (Indiana Jones Adventure for ~9:45 AM). Then brisk walk down Main Street to the Central Plaza rope!'
       },
       {
         id: 'c-ropedrop-space',
@@ -1151,8 +1162,7 @@
         sortTime: '08:00',
         timeLabel: '8:00 AM – 8:35 AM',
         title: 'Rope Drop Sprint: Space Mountain',
-        desc: 'Cast members drop ropes at 8:00 AM. Walk with purpose into Tomorrowland directly to Space Mountain for a 5–10 min standby walk-on!',
-        mapStop: 'spacemtn'
+        desc: 'Cast members drop ropes at 8:00 AM. Walk with purpose into Tomorrowland directly to Space Mountain for a 5–10 min standby walk-on!'
       },
       {
         id: 'c-matterhorn',
@@ -1160,8 +1170,7 @@
         sortTime: '08:40',
         timeLabel: '8:40 AM – 9:15 AM',
         title: 'Matterhorn Bobsleds (Standby)',
-        desc: 'Right after Space Mountain, cross over to Matterhorn Bobsleds before standby exceeds 20 minutes.',
-        mapStop: 'matterhorn'
+        desc: 'Right after Space Mountain, cross over to Matterhorn Bobsleds before standby exceeds 20 minutes.'
       },
       {
         id: 'c-bigthunder-pirates',
@@ -1169,8 +1178,7 @@
         sortTime: '09:20',
         timeLabel: '9:20 AM – 10:20 AM',
         title: 'Big Thunder Mountain & Pirates',
-        desc: 'Head to Frontierland for Big Thunder Mountain, then walk onto Pirates of the Caribbean (Pirates does NOT have Lightning Lane, making morning standby essential!).',
-        mapStop: 'bigthunder'
+        desc: 'Head to Frontierland for Big Thunder Mountain, then walk onto Pirates of the Caribbean (Pirates does NOT have Lightning Lane, making morning standby essential!).'
       },
       {
         id: 'c-redeem-indy',
@@ -1178,8 +1186,7 @@
         sortTime: '10:25',
         timeLabel: '10:25 AM – 10:55 AM',
         title: 'Redeem LLMP #1: Indiana Jones Adventure',
-        desc: 'Scan your Indiana Jones Lightning Lane barcode! RULE 1 TRIGGER: The moment you scan at the touchpoint, immediately pull your next LLMP for DCA (e.g. WEB SLINGERS or Incredicoaster for 12:00 PM).',
-        mapStop: 'indy'
+        desc: 'Scan your Indiana Jones Lightning Lane barcode! RULE 1 TRIGGER: The moment you scan at the touchpoint, immediately pull your next LLMP for DCA (e.g. WEB SLINGERS or Incredicoaster for 12:00 PM).'
       },
       {
         id: 'c-park-hop',
@@ -1187,8 +1194,7 @@
         sortTime: '11:00',
         timeLabel: '11:00 AM – 11:30 AM',
         title: 'Park Hop to DCA & Cars Land Single Rider',
-        desc: 'Park hopping unlocks at 11:00 AM! Walk across the Esplanade into DCA. Head to Cars Land and enter the Radiator Springs Racers Single Rider line (bypasses the $26 Single Pass fee in 15–20 mins).',
-        mapStop: 'carsracers'
+        desc: 'Park hopping unlocks at 11:00 AM! Walk across the Esplanade into DCA. Head to Cars Land and enter the Radiator Springs Racers Single Rider line (bypasses the $26 Single Pass fee in 15–20 mins).'
       },
       {
         id: 'c-lunch-pym',
@@ -1196,8 +1202,7 @@
         sortTime: '12:00',
         timeLabel: '12:00 PM – 1:00 PM',
         title: 'Pym Test Kitchen & Avengers Campus',
-        desc: 'Redeem WEB SLINGERS LLMP, grab Quantum Pretzel & craft brew cheese sauce at Pym Test Kitchen. Guardians skipped for stress-free afternoon!',
-        mapStop: 'pymtest'
+        desc: 'Redeem WEB SLINGERS LLMP, grab Quantum Pretzel & craft brew cheese sauce at Pym Test Kitchen. Guardians skipped for stress-free afternoon!'
       },
       {
         id: 'c-soarin-incredicoaster',
@@ -1205,8 +1210,7 @@
         sortTime: '13:15',
         timeLabel: '1:15 PM – 3:30 PM',
         title: 'Soarin\' Around the World & Incredicoaster',
-        desc: 'Use rolled DCA Lightning Lanes for Soarin\' and Incredicoaster (or Pixar Pier Single Rider). Cool off at Toy Story Midway Mania.',
-        mapStop: 'soarin'
+        desc: 'Use rolled DCA Lightning Lanes for Soarin\' and Incredicoaster (or Pixar Pier Single Rider). Cool off at Toy Story Midway Mania.'
       },
       {
         id: 'c-hop-back',
@@ -1214,8 +1218,7 @@
         sortTime: '18:30',
         timeLabel: '6:30 PM – 8:00 PM',
         title: 'Hop Back to Disneyland: Galaxy\'s Edge',
-        desc: 'Return to Disneyland. Explore Star Wars: Galaxy\'s Edge under twilight. Hop in standby for Rise of the Resistance or Smugglers Run.',
-        mapStop: 'rise'
+        desc: 'Return to Disneyland. Explore Star Wars: Galaxy\'s Edge under twilight. Hop in standby for Rise of the Resistance or Smugglers Run.'
       },
       {
         id: 'c-fireworks',
@@ -1223,8 +1226,7 @@
         sortTime: '21:00',
         timeLabel: '9:00 PM – 10:00 PM',
         title: 'Nighttime Spectacular & Fireworks',
-        desc: 'Find a spot near Main Street Central Plaza or along the Rivers of America for castle projections and fireworks.',
-        mapStop: 'castle'
+        desc: 'Find a spot near Main Street Central Plaza or along the Rivers of America for castle projections and fireworks.'
       }
     ];
 
@@ -1324,6 +1326,9 @@
         const storedCheckins = localStorage.getItem('disney_checkins_v1');
         checkinData = storedCheckins ? JSON.parse(storedCheckins) : {};
 
+        const storedTodos = localStorage.getItem('disney_todos_v1');
+        todoItems = storedTodos ? JSON.parse(storedTodos) : JSON.parse(JSON.stringify(defaultTodoList));
+
         const storedLLMP = localStorage.getItem('disney_llmp_passes_v1');
         simulatedLLMPPasses = storedLLMP ? JSON.parse(storedLLMP) : [
           {
@@ -1339,6 +1344,7 @@
         console.warn("Storage read error:", e);
         disneyCards = JSON.parse(JSON.stringify(defaultDisneyCards));
         checkinData = {};
+        todoItems = JSON.parse(JSON.stringify(defaultTodoList));
         simulatedLLMPPasses = [];
       }
     }
@@ -1347,10 +1353,226 @@
       try {
         localStorage.setItem('disney_plan_cards_v1', JSON.stringify(disneyCards));
         localStorage.setItem('disney_checkins_v1', JSON.stringify(checkinData));
+        localStorage.setItem('disney_todos_v1', JSON.stringify(todoItems));
         localStorage.setItem('disney_llmp_passes_v1', JSON.stringify(simulatedLLMPPasses));
       } catch (e) {
         console.warn("Storage write error:", e);
       }
+    }
+
+    // ================= TO-DO LIST FEATURE LOGIC =================
+    function renderTodoList() {
+      const container = document.getElementById('todoCardsContainer');
+      const progressCount = document.getElementById('todoProgressCount');
+      const progressPct = document.getElementById('todoProgressPct');
+      const progressBar = document.getElementById('todoProgressBar');
+      const todoBadge = document.getElementById('todoBadge');
+
+      if (!container) return;
+
+      const total = todoItems.length;
+      const completed = todoItems.filter(t => t.completed).length;
+      const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      if (progressCount) progressCount.textContent = `${completed} / ${total}`;
+      if (progressPct) progressPct.textContent = `${pct}% Done`;
+      if (progressBar) progressBar.style.width = `${pct}%`;
+
+      if (todoBadge) {
+        if (total > completed) todoBadge.classList.remove('hidden');
+        else todoBadge.classList.add('hidden');
+      }
+
+      const filtered = todoItems.filter(item => {
+        if (currentTodoFilter === 'active') return !item.completed;
+        if (currentTodoFilter === 'completed') return item.completed;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="glass-card rounded-2xl p-8 text-center space-y-2">
+            <h4 class="text-sm font-bold text-white">No items in this filter</h4>
+            <p class="text-xs text-slate-400">Tap "+ Add To-Do" above to add things you want to do!</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => {
+        const checkin = checkinData[item.id];
+        const photos = (checkin && Array.isArray(checkin.photos)) ? checkin.photos : [];
+
+        let categoryTag = item.category || 'To-Do';
+        let categoryColor = 'bg-amber-400/15 text-amber-300 border border-amber-400/30';
+        if (item.category === 'Snack') categoryColor = 'bg-rose-500/15 text-rose-300 border border-rose-500/30';
+        if (item.category === 'Merch') categoryColor = 'bg-purple-500/15 text-purple-300 border border-purple-500/30';
+        if (item.category === 'Photo Op') categoryColor = 'bg-cyan-500/15 text-cyan-300 border border-cyan-400/30';
+        if (item.category === 'Show') categoryColor = 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/30';
+
+        let storySection = '';
+        if (photos.length > 0) {
+          const storyCards = photos.map((p, idx) => `
+            <div class="relative rounded-2xl overflow-hidden aspect-[9/16] group cursor-pointer tap-effect border border-white/15 bg-disney-midnight shadow-lg" onclick="openRideStoryLightbox('${item.id}', ${idx})">
+              <img src="${p.dataUrl}" alt="Check-In ${idx + 1}" class="w-full h-full object-cover">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-between p-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10">
+                    #${idx + 1}
+                  </span>
+                  <button onclick="deleteSingleStory('${item.id}', '${p.id}', event)" class="w-6 h-6 rounded-full bg-black/70 text-rose-400 hover:text-white hover:bg-rose-600 flex items-center justify-center text-xs transition-all tap-effect border border-white/20" title="Delete Photo">
+                    <i class="ph-bold ph-trash"></i>
+                  </button>
+                </div>
+                <div>
+                  <span class="text-[9px] text-amber-300 font-mono font-bold block truncate">${p.checkinTimestamp || 'Today'}</span>
+                  <span class="text-[8px] text-slate-300">Tap to expand ➔</span>
+                </div>
+              </div>
+            </div>
+          `).join('');
+
+          storySection = `
+            <div class="mt-2.5 pt-2 border-t border-white/5 space-y-2">
+              <div class="flex items-center justify-between px-0.5">
+                <span class="text-[10px] font-mono text-cyan-300 font-bold flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                  ${photos.length} Check-In Picture${photos.length > 1 ? 's' : ''}
+                </span>
+                <button onclick="triggerTodoPhotoCapture('${item.id}')" class="text-[10px] font-bold text-amber-300 hover:text-amber-200 flex items-center gap-1 tap-effect">
+                  <i class="ph-bold ph-plus-circle"></i> Add Picture
+                </button>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                ${storyCards}
+              </div>
+            </div>
+          `;
+        } else {
+          storySection = `
+            <div class="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between">
+              <button onclick="triggerTodoPhotoCapture('${item.id}')" class="tap-effect text-[11px] font-semibold text-slate-300 hover:text-amber-300 flex items-center gap-1.5 bg-disney-midnight/60 px-3 py-1.5 rounded-xl border border-white/10">
+                <i class="ph-bold ph-camera text-amber-400"></i> Snap Check-In Picture
+              </button>
+              <button onclick="deleteTodoItem('${item.id}')" class="text-[10px] text-rose-400 hover:underline flex items-center gap-0.5">
+                Delete
+              </button>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="p-3.5 rounded-2xl glass-card border border-white/10 ${item.completed ? 'border-emerald-500/40 bg-emerald-950/15' : ''}">
+            <div class="flex items-start justify-between gap-2.5">
+              <div class="flex-1 cursor-pointer" onclick="toggleTodoCompleted('${item.id}')">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${categoryColor}">${categoryTag}</span>
+                  ${item.location ? `<span class="text-[10px] font-medium text-slate-400 flex items-center gap-0.5"><i class="ph-bold ph-map-pin text-amber-400"></i> ${item.location}</span>` : ''}
+                </div>
+                <h3 class="text-xs font-bold mt-1.5 ${item.completed ? 'line-through text-slate-400' : 'text-white'}">${item.title}</h3>
+                ${item.notes ? `<p class="text-[11px] text-slate-300 mt-1 leading-relaxed">${item.notes}</p>` : ''}
+              </div>
+
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <button onclick="triggerTodoPhotoCapture('${item.id}')" class="w-8 h-8 rounded-xl bg-slate-800 border border-white/10 hover:border-amber-400/40 text-amber-300 flex items-center justify-center tap-effect" title="Add Check-In Picture">
+                  <i class="ph-bold ph-camera text-sm"></i>
+                </button>
+                <button onclick="toggleTodoCompleted('${item.id}')" class="w-8 h-8 rounded-xl ${item.completed ? 'bg-emerald-500 text-disney-midnight font-bold shadow-md shadow-emerald-500/20' : 'bg-disney-midnight border border-white/20 text-slate-400'} flex items-center justify-center tap-effect" title="Mark Done">
+                  <i class="ph-bold ${item.completed ? 'ph-check-bold text-base' : 'ph-check text-xs'}"></i>
+                </button>
+              </div>
+            </div>
+            ${storySection}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filterTodoCategory(filterType) {
+      currentTodoFilter = filterType;
+      document.querySelectorAll('.todo-filter-pill').forEach(pill => {
+        pill.classList.remove('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+        pill.classList.add('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+      });
+      const activePill = document.getElementById('todo-filter-' + filterType);
+      if (activePill) {
+        activePill.classList.remove('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+        activePill.classList.add('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+      }
+      renderTodoList();
+    }
+
+    function toggleTodoCompleted(todoId) {
+      const item = todoItems.find(t => t.id === todoId);
+      if (!item) return;
+      item.completed = !item.completed;
+      saveStorage();
+      renderTodoList();
+      if (window.syncTodosToFirebase) window.syncTodosToFirebase(todoItems);
+      showToast(item.completed ? '🎉 Done!' : 'Marked active');
+    }
+
+    function openTodoModal() {
+      const modal = document.getElementById('todoEditorModal');
+      document.getElementById('editTodoTitle').value = '';
+      document.getElementById('editTodoLocation').value = '';
+      document.getElementById('editTodoNotes').value = '';
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeTodoModal(event, force = false) {
+      if (force || (event && event.target.id === 'todoEditorModal')) {
+        const modal = document.getElementById('todoEditorModal');
+        if (modal) modal.classList.add('hidden');
+      }
+    }
+
+    function handleSaveTodo(e) {
+      e.preventDefault();
+      const title = document.getElementById('editTodoTitle').value.trim();
+      const category = document.getElementById('editTodoCategory').value;
+      const location = document.getElementById('editTodoLocation').value.trim();
+      const notes = document.getElementById('editTodoNotes').value.trim();
+
+      if (!title) return;
+
+      const newTodo = {
+        id: 'todo-' + Date.now(),
+        title,
+        category,
+        location,
+        notes,
+        completed: false
+      };
+
+      todoItems.unshift(newTodo);
+      saveStorage();
+      closeTodoModal(null, true);
+      renderTodoList();
+      if (window.syncTodosToFirebase) window.syncTodosToFirebase(todoItems);
+      showToast('To-Do added! 📝');
+    }
+
+    function deleteTodoItem(todoId) {
+      if (confirm('Delete this To-Do item?')) {
+        todoItems = todoItems.filter(t => t.id !== todoId);
+        if (checkinData[todoId]) {
+          delete checkinData[todoId];
+          if (window.deleteCheckinFromFirebase) window.deleteCheckinFromFirebase(todoId);
+        }
+        saveStorage();
+        renderTodoList();
+        renderAlbumView();
+        if (window.syncTodosToFirebase) window.syncTodosToFirebase(todoItems);
+        showToast('To-Do deleted');
+      }
+    }
+
+    function triggerTodoPhotoCapture(todoId) {
+      photoTargetType = 'todo';
+      photoTargetId = todoId;
+      const item = todoItems.find(t => t.id === todoId);
+      openPhotoSourceModal(item ? `Check-In: ${item.title}` : 'Add Check-In Picture');
     }
 
     // ================= ALL DISNEYLAND & DCA RIDES CATALOG =================
@@ -1992,7 +2214,6 @@
       const category = document.getElementById('editCardCategory').value;
       const tag = document.getElementById('editCardTag').value || 'Stop';
       const desc = document.getElementById('editCardDesc').value;
-      const mapStop = document.getElementById('editCardMapStop').value || null;
 
       const newCard = {
         id: 'custom-' + Date.now(),
@@ -2002,8 +2223,7 @@
         title,
         category,
         tag,
-        desc,
-        mapStop
+        desc
       };
 
       disneyCards.push(newCard);
@@ -2011,6 +2231,236 @@
       closeCardModal(null, true);
       renderTimeline();
       showToast('Added stop to timeline! 🏰');
+    }
+
+    // ================= TO-DO LIST MANAGEMENT =================
+    function renderTodos() {
+      const container = document.getElementById('todoListContainer');
+      const progressText = document.getElementById('todoProgressCount');
+      const progressBar = document.getElementById('todoProgressBar');
+      const todoBadge = document.getElementById('todoBadge');
+      if (!container) return;
+
+      const totalTodos = disneyTodos.length;
+      const completedTodos = disneyTodos.filter(t => t.completed).length;
+      const pct = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
+
+      if (progressText) progressText.textContent = `${completedTodos} / ${totalTodos} (${pct}%)`;
+      if (progressBar) progressBar.style.width = `${pct}%`;
+
+      if (todoBadge) {
+        const pendingCount = totalTodos - completedTodos;
+        if (pendingCount > 0) todoBadge.classList.remove('hidden');
+        else todoBadge.classList.add('hidden');
+      }
+
+      const filtered = disneyTodos.filter(todo => {
+        if (currentTodoFilter === 'pending') return !todo.completed;
+        if (currentTodoFilter === 'completed') return todo.completed;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="glass-card rounded-2xl p-8 text-center space-y-2">
+            <div class="w-10 h-10 rounded-xl bg-amber-400/10 text-amber-400 flex items-center justify-center mx-auto text-xl">
+              <i class="ph-bold ph-check-square"></i>
+            </div>
+            <h4 class="text-sm font-bold text-white">No To-Dos Here</h4>
+            <p class="text-xs text-slate-400">Tap "+ New To-Do" above to add fun missions, snacks, or souvenirs!</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(todo => {
+        const checkin = checkinData[todo.id];
+        const photos = (checkin && Array.isArray(checkin.photos)) ? checkin.photos : [];
+
+        let badgeBg = 'bg-amber-400/15 text-amber-300 border-amber-400/30';
+        if (todo.category === 'Snacks') badgeBg = 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+        if (todo.category === 'Merch') badgeBg = 'bg-purple-500/15 text-purple-300 border-purple-500/30';
+        if (todo.category === 'Photo Spot') badgeBg = 'bg-cyan-500/15 text-cyan-300 border-cyan-400/30';
+
+        let storySection = '';
+        if (photos.length > 0) {
+          const storyCards = photos.map((p, idx) => `
+            <div class="relative rounded-2xl overflow-hidden aspect-[9/16] group cursor-pointer tap-effect border border-white/15 bg-disney-midnight shadow-lg" onclick="openRideStoryLightbox('${todo.id}', ${idx})">
+              <img src="${p.dataUrl}" alt="Story ${idx + 1}" class="w-full h-full object-cover">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-between p-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10">
+                    #${idx + 1}
+                  </span>
+                  <button onclick="deleteSingleStory('${todo.id}', '${p.id}', event)" class="w-6 h-6 rounded-full bg-black/70 text-rose-400 hover:text-white hover:bg-rose-600 flex items-center justify-center text-xs transition-all tap-effect border border-white/20" title="Delete Story">
+                    <i class="ph-bold ph-trash"></i>
+                  </button>
+                </div>
+                <div>
+                  <span class="text-[9px] text-amber-300 font-mono font-bold block truncate">${p.checkinTimestamp || 'Today'}</span>
+                  <span class="text-[8px] text-slate-300">Tap to expand ➔</span>
+                </div>
+              </div>
+            </div>
+          `).join('');
+
+          storySection = `
+            <div class="mt-2.5 pt-2 border-t border-white/5 space-y-2">
+              <div class="flex items-center justify-between px-0.5">
+                <span class="text-[10px] font-mono text-cyan-300 font-bold flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                  ${photos.length} Check-In Stor${photos.length > 1 ? 'ies' : 'y'}
+                </span>
+                <button onclick="triggerTodoStoryCapture('${todo.id}')" class="text-[10px] font-bold text-amber-300 hover:text-amber-200 flex items-center gap-1 tap-effect">
+                  <i class="ph-bold ph-plus-circle"></i> Add Story
+                </button>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                ${storyCards}
+              </div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="p-3.5 rounded-2xl glass-card border ${todo.completed ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-white/10'} space-y-2 transition-all">
+            <div class="flex items-start justify-between gap-2.5">
+              <button onclick="toggleTodoCompleted('${todo.id}')" class="w-7 h-7 rounded-xl ${todo.completed ? 'bg-emerald-500 text-disney-midnight font-bold shadow-md shadow-emerald-500/20' : 'bg-disney-midnight border border-white/20 text-slate-400'} flex items-center justify-center tap-effect flex-shrink-0 mt-0.5">
+                <i class="ph-bold ${todo.completed ? 'ph-check-bold text-base' : 'ph-check text-xs'}"></i>
+              </button>
+              <div class="flex-1 cursor-pointer" onclick="toggleTodoCompleted('${todo.id}')">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h4 class="text-xs font-bold ${todo.completed ? 'text-emerald-300 line-through' : 'text-white'}">${todo.title}</h4>
+                  <span class="text-[9px] font-bold px-2 py-0.5 rounded-full border ${badgeBg}">${todo.category}</span>
+                </div>
+                ${todo.location ? `<p class="text-[10px] text-amber-300/80 font-mono mt-0.5"><i class="ph-bold ph-map-pin"></i> ${todo.location}</p>` : ''}
+                ${todo.notes ? `<p class="text-xs text-slate-300 mt-1 leading-relaxed">${todo.notes}</p>` : ''}
+              </div>
+              <div class="flex items-center gap-1 flex-shrink-0">
+                <button onclick="triggerTodoStoryCapture('${todo.id}')" class="w-7 h-7 rounded-lg bg-slate-800 border border-white/10 hover:border-amber-400/40 text-amber-300 flex items-center justify-center tap-effect" title="Snap Story">
+                  <i class="ph-bold ph-camera text-xs"></i>
+                </button>
+                <button onclick="deleteTodoItem('${todo.id}')" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-rose-400 flex items-center justify-center tap-effect border border-white/5" title="Delete">
+                  <i class="ph-bold ph-trash text-xs"></i>
+                </button>
+              </div>
+            </div>
+            ${storySection}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filterTodos(filterType) {
+      currentTodoFilter = filterType;
+      document.querySelectorAll('.todo-chip').forEach(c => {
+        c.classList.remove('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+        c.classList.add('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+      });
+      const activeChip = document.getElementById('todo-filter-' + filterType);
+      if (activeChip) {
+        activeChip.classList.remove('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+        activeChip.classList.add('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+      }
+      renderTodos();
+    }
+
+    function toggleTodoCompleted(todoId) {
+      const todo = disneyTodos.find(t => t.id === todoId);
+      if (!todo) return;
+      todo.completed = !todo.completed;
+      saveStorage();
+      renderTodos();
+      if (window.syncTodosToFirebase) {
+        window.syncTodosToFirebase();
+      }
+      showToast(todo.completed ? '🎉 Completed mission!' : 'Task uncompleted');
+    }
+
+    function openTodoModal() {
+      const modal = document.getElementById('todoEditorModal');
+      const form = document.getElementById('todoEditorForm');
+      if (form) form.reset();
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeTodoModal(event, force = false) {
+      if (force || (event && event.target.id === 'todoEditorModal')) {
+        const modal = document.getElementById('todoEditorModal');
+        if (modal) modal.classList.add('hidden');
+      }
+    }
+
+    function handleSaveTodo(e) {
+      e.preventDefault();
+      const title = document.getElementById('editTodoText').value.trim();
+      const category = document.getElementById('editTodoCategory').value;
+      const location = document.getElementById('editTodoLocation').value.trim();
+      const notes = document.getElementById('editTodoNotes').value.trim();
+
+      const newTodo = {
+        id: 'todo-' + Date.now(),
+        title,
+        category,
+        location,
+        notes,
+        completed: false,
+        createdAt: Date.now()
+      };
+
+      disneyTodos.unshift(newTodo);
+      saveStorage();
+      closeTodoModal(null, true);
+      renderTodos();
+      if (window.syncTodosToFirebase) {
+        window.syncTodosToFirebase();
+      }
+      showToast('New To-Do mission created! 📋✨');
+    }
+
+    function addQuickTodo(title, category = 'Snacks') {
+      const newTodo = {
+        id: 'todo-' + Date.now(),
+        title,
+        category,
+        location: 'Disneyland Resort',
+        notes: '',
+        completed: false,
+        createdAt: Date.now()
+      };
+      disneyTodos.unshift(newTodo);
+      saveStorage();
+      renderTodos();
+      if (window.syncTodosToFirebase) {
+        window.syncTodosToFirebase();
+      }
+      showToast(`Added "${title}" to your To-Do list!`);
+    }
+
+    function deleteTodoItem(todoId) {
+      if (confirm('Delete this task?')) {
+        disneyTodos = disneyTodos.filter(t => t.id !== todoId);
+        if (checkinData[todoId]) {
+          delete checkinData[todoId];
+          if (window.deleteCheckinFromFirebase) {
+            window.deleteCheckinFromFirebase(todoId);
+          }
+        }
+        saveStorage();
+        renderTodos();
+        renderAlbumView();
+        if (window.syncTodosToFirebase) {
+          window.syncTodosToFirebase();
+        }
+        showToast('To-Do deleted');
+      }
+    }
+
+    function triggerTodoStoryCapture(todoId) {
+      photoTargetType = 'todo';
+      photoTargetId = todoId;
+      const todo = disneyTodos.find(t => t.id === todoId);
+      openPhotoSourceModal(todo ? `Story: ${todo.title}` : 'Add To-Do Story');
     }
 
     function deleteTimelineCard(cardId) {
@@ -2030,6 +2480,7 @@
         saveStorage();
         renderAllRidesView();
         renderTimeline();
+        renderTodos();
         renderAlbumView();
         showToast('Album cleared');
       }
@@ -2050,136 +2501,6 @@
         renderAlbumView();
         showToast('Food photos reset');
       }
-    }
-
-    // ================= LEAFLET GPS RESORT MAP LOGIC =================
-    let disneyMapInstance = null;
-    let resortMapMarkers = [];
-
-    const disneyMapLocations = [
-      { id: 'spacemtn', name: 'Space Mountain', park: 'dl', lat: 33.8105, lng: -117.9174, desc: 'Tomorrowland • Rope Drop Sprint Target' },
-      { id: 'indy', name: 'Indiana Jones Adventure', park: 'dl', lat: 33.8115, lng: -117.9205, desc: 'Adventureland • LLMP #1 Priority' },
-      { id: 'bigthunder', name: 'Big Thunder Mountain', park: 'dl', lat: 33.8129, lng: -117.9209, desc: 'Frontierland • Morning Standby Run' },
-      { id: 'pirates', name: 'Pirates of the Caribbean', park: 'dl', lat: 33.8118, lng: -117.9221, desc: 'New Orleans Square • No LLMP (Standby Essential)' },
-      { id: 'matterhorn', name: 'Matterhorn Bobsleds', park: 'dl', lat: 33.8130, lng: -117.9184, desc: 'Fantasyland • Single Rider Available' },
-      { id: 'rise', name: 'Rise of the Resistance', park: 'dl', lat: 33.8152, lng: -117.9223, desc: 'Star Wars: Galaxy\'s Edge • Single Pass ($26)' },
-      { id: 'castle', name: 'Sleeping Beauty Castle', park: 'dl', lat: 33.8121, lng: -117.9190, desc: 'Central Plaza Hub • Fireworks & Rope Line' },
-      { id: 'guardians', name: 'Guardians of the Galaxy (SKIPPED)', park: 'dca', lat: 33.8068, lng: -117.9175, desc: 'Avengers Campus • Skipped for comfort' },
-      { id: 'carsracers', name: 'Radiator Springs Racers', park: 'dca', lat: 33.8052, lng: -117.9198, desc: 'Cars Land • Single Rider Bypass ($0)' },
-      { id: 'incredicoaster', name: 'Incredicoaster', park: 'dca', lat: 33.8041, lng: -117.9218, desc: 'Pixar Pier • Fast Single Rider Line' },
-      { id: 'soarin', name: 'Soarin\' Around the World', park: 'dca', lat: 33.8085, lng: -117.9212, desc: 'Grizzly Peak • Smooth Gentle Flight' },
-      { id: 'toystory', name: 'Toy Story Midway Mania!', park: 'dca', lat: 33.8048, lng: -117.9213, desc: 'Pixar Pier • 4D Midway Games' },
-      { id: 'webslingers', name: 'WEB SLINGERS', park: 'dca', lat: 33.8078, lng: -117.9188, desc: 'Avengers Campus • Interactive Screen Action' },
-      { id: 'jollyholiday', name: 'Jolly Holiday Bakery', park: 'dl', lat: 33.8115, lng: -117.9193, desc: 'Main Street Hub • Birria Grilled Cheese' },
-      { id: 'pymtest', name: 'Pym Test Kitchen', park: 'dca', lat: 33.8075, lng: -117.9190, desc: 'Avengers Campus • Quantum Pretzel' },
-      { id: 'cozycone', name: 'Cozy Cone Motel', park: 'dca', lat: 33.8057, lng: -117.9192, desc: 'Cars Land • Chili Cone Queso' },
-      { id: 'bengalbbq', name: 'Bengal Barbecue', park: 'dl', lat: 33.8113, lng: -117.9200, desc: 'Adventureland • Banyan Beef Skewers' }
-    ];
-
-    function initResortMap() {
-      if (disneyMapInstance) {
-        setTimeout(() => disneyMapInstance.invalidateSize(), 200);
-        return;
-      }
-
-      disneyMapInstance = L.map('disneyLeafletMap').setView([33.8095, -117.9190], 15);
-
-      L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-        subdomains: ['0', '1', '2', '3'],
-        maxZoom: 20,
-        attribution: '© Google Maps'
-      }).addTo(disneyMapInstance);
-
-      renderResortMarkers('all');
-    }
-
-    function renderResortMarkers(category = 'all') {
-      resortMapMarkers.forEach(m => disneyMapInstance.removeLayer(m));
-      resortMapMarkers = [];
-
-      disneyMapLocations.forEach(loc => {
-        if (category === 'dl' && loc.park !== 'dl') return;
-        if (category === 'dca' && loc.park !== 'dca') return;
-        if (category === 'food' && !['jollyholiday', 'pymtest', 'cozycone', 'bengalbbq'].includes(loc.id)) return;
-
-        let pinColor = loc.park === 'dl' ? '#fbbf24' : '#06b6d4';
-        if (loc.id.includes('holiday') || loc.id.includes('pym') || loc.id.includes('cone') || loc.id.includes('bbq')) pinColor = '#fb7185';
-
-        const customIcon = L.divIcon({
-          className: 'disney-map-pin',
-          html: `<div style="background-color: ${pinColor}; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #000;">★</div>`,
-          iconSize: [26, 26],
-          iconAnchor: [13, 13]
-        });
-
-        const marker = L.marker([loc.lat, loc.lng], { icon: customIcon }).addTo(disneyMapInstance);
-        marker.bindPopup(`
-          <div style="min-width: 170px;">
-            <strong style="color: #fff; font-size: 12px;">${loc.name}</strong>
-            <p style="color: #94a3b8; font-size: 10px; margin-top: 3px;">${loc.desc}</p>
-            <div style="margin-top: 6px;">
-              <a href="https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}" target="_blank" style="font-size: 10px; color: #000; background: #fbbf24; padding: 3px 8px; border-radius: 6px; font-weight: bold; text-decoration: none;">Walk Navigation ➔</a>
-            </div>
-          </div>
-        `);
-        marker.destinationId = loc.id;
-        resortMapMarkers.push(marker);
-      });
-    }
-
-    function setMapLayer(type) {
-      if (!disneyMapInstance) return;
-      const btnRoad = document.getElementById('btn-map-roadmap');
-      const btnSat = document.getElementById('btn-map-satellite');
-
-      disneyMapInstance.eachLayer(layer => {
-        if (layer instanceof L.TileLayer) disneyMapInstance.removeLayer(layer);
-      });
-
-      const lyrs = type === 'satellite' ? 'y' : 'm';
-      L.tileLayer(`https://mt{s}.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}`, {
-        subdomains: ['0', '1', '2', '3'],
-        maxZoom: 20
-      }).addTo(disneyMapInstance);
-
-      if (type === 'satellite') {
-        btnRoad.className = 'px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white tap-effect transition-all flex items-center gap-1';
-        btnSat.className = 'px-2.5 py-1 rounded-lg font-bold bg-cyan-400 text-disney-midnight tap-effect transition-all flex items-center gap-1';
-      } else {
-        btnRoad.className = 'px-2.5 py-1 rounded-lg font-bold bg-amber-400 text-disney-midnight tap-effect transition-all flex items-center gap-1';
-        btnSat.className = 'px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white tap-effect transition-all flex items-center gap-1';
-      }
-
-      renderResortMarkers('all');
-    }
-
-    function filterMapCategory(cat) {
-      document.querySelectorAll('.map-chip').forEach(c => {
-        c.classList.remove('bg-amber-400', 'text-disney-midnight');
-        c.classList.add('bg-disney-card', 'text-slate-300');
-      });
-      const activeChip = document.getElementById('map-chip-' + cat);
-      if (activeChip) {
-        activeChip.classList.remove('bg-disney-card', 'text-slate-300');
-        activeChip.classList.add('bg-amber-400', 'text-disney-midnight');
-      }
-      renderResortMarkers(cat);
-    }
-
-    function resetResortMap() {
-      if (disneyMapInstance) disneyMapInstance.setView([33.8095, -117.9190], 15);
-    }
-
-    function flyToMapStop(stopId) {
-      switchTab('map');
-      setTimeout(() => {
-        const target = disneyMapLocations.find(l => l.id === stopId);
-        if (target && disneyMapInstance) {
-          disneyMapInstance.flyTo([target.lat, target.lng], 17, { duration: 1 });
-          const marker = resortMapMarkers.find(m => m.destinationId === stopId);
-          if (marker) setTimeout(() => marker.openPopup(), 1000);
-        }
-      }, 150);
     }
 
     // ================= TIMELINE RENDERING & STORY ACTIONS =================
@@ -2220,15 +2541,6 @@
         if (card.category === 'single') badgeColor = 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30';
         if (card.category === 'food') badgeColor = 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
 
-        let mapBtn = '';
-        if (card.mapStop) {
-          mapBtn = `
-            <button onclick="flyToMapStop('${card.mapStop}')" class="text-[10px] font-semibold text-amber-400 hover:underline flex items-center gap-1 tap-effect">
-              <i class="ph-bold ph-map-pin"></i> View Map
-            </button>
-          `;
-        }
-
         let storySection = '';
         if (photos.length > 0) {
           const timelineStories = photos.map((p, idx) => `
@@ -2262,7 +2574,6 @@
                   <i class="ph-bold ph-plus-circle"></i> Add Story
                 </button>
               </div>
-              <!-- 2-Columns Vertical Story Grid for Timeline Card -->
               <div class="grid grid-cols-2 gap-2">
                 ${timelineStories}
               </div>
@@ -2274,7 +2585,6 @@
               <button onclick="triggerTimelineStoryCapture('${card.id}')" class="tap-effect text-[11px] font-semibold text-slate-300 hover:text-amber-300 flex items-center gap-1.5 bg-disney-midnight/60 px-3 py-1.5 rounded-xl border border-white/10">
                 <i class="ph-bold ph-camera text-amber-400"></i> Add Story Photo
               </button>
-              ${mapBtn}
             </div>
           `;
         }
@@ -2294,7 +2604,6 @@
               </button>
             </div>
             <p class="text-xs text-slate-300 leading-relaxed">${card.desc || ''}</p>
-            ${photos.length > 0 && mapBtn ? `<div class="pt-1">${mapBtn}</div>` : ''}
             ${storySection}
           </div>
         `;
@@ -2303,21 +2612,22 @@
 
     // ================= ALBUM / MEMORIES VIEW =================
     function renderAlbumView() {
-      const grid = document.getElementById('albumGrid');
+      const albumGrid = document.getElementById('albumGrid');
       const emptyState = document.getElementById('albumEmptyState');
+      const albumBadge = document.getElementById('albumBadge');
       const countStat = document.getElementById('albumCountStat');
       const remainingStat = document.getElementById('albumRemainingStat');
       const storageStat = document.getElementById('albumStorageStat');
-      const albumBadge = document.getElementById('albumBadge');
 
-      const allPhotos = [];
+      const flattenedPhotos = [];
       Object.entries(checkinData).forEach(([slotId, entry]) => {
         if (entry && Array.isArray(entry.photos)) {
           entry.photos.forEach((photo, pIdx) => {
             if (photo && photo.dataUrl) {
-              allPhotos.push({
+              flattenedPhotos.push({
                 slotId,
-                photoIdx: pIdx,
+                photoIndex: pIdx,
+                photoId: photo.id,
                 dataUrl: photo.dataUrl,
                 title: entry.title || 'Disney Memory',
                 timestamp: photo.checkinTimestamp || 'Today',
@@ -2328,36 +2638,36 @@
         }
       });
 
-      const totalPhotos = allPhotos.length;
+      const totalPhotos = flattenedPhotos.length;
       if (countStat) countStat.textContent = totalPhotos;
-      if (remainingStat) {
-        const completedRides = riddenRidesSet.size;
-        remainingStat.textContent = Math.max(0, 48 - completedRides);
-      }
 
-      const rawBlobSize = new Blob([JSON.stringify(checkinData)]).size;
-      if (storageStat) storageStat.textContent = `${Math.round(rawBlobSize / 1024)} KB`;
+      const totalRides = allDisneyRides.length;
+      const riddenCount = riddenRidesSet.size;
+      if (remainingStat) remainingStat.textContent = Math.max(0, totalRides - riddenCount);
 
-      if (albumBadge) {
-        if (totalPhotos > 0) albumBadge.classList.remove('hidden');
-        else albumBadge.classList.add('hidden');
-      }
+      const rawString = JSON.stringify(checkinData);
+      const kb = Math.round(new Blob([rawString]).size / 1024);
+      if (storageStat) storageStat.textContent = kb + ' KB';
 
       if (totalPhotos === 0) {
-        if (grid) grid.innerHTML = '';
+        if (albumGrid) albumGrid.innerHTML = '';
         if (emptyState) emptyState.classList.remove('hidden');
+        if (albumBadge) albumBadge.classList.add('hidden');
         return;
       }
 
       if (emptyState) emptyState.classList.add('hidden');
-      allPhotos.sort((a, b) => (b.rawTime || 0) - (a.rawTime || 0));
+      if (albumBadge) albumBadge.classList.remove('hidden');
 
-      if (grid) {
-        grid.innerHTML = allPhotos.map(item => `
-          <div class="glass-card rounded-2xl overflow-hidden border border-white/10 p-2 space-y-1.5">
-            <div class="relative rounded-xl overflow-hidden cursor-pointer tap-effect" onclick="openRideStoryLightbox('${item.slotId}', ${item.photoIdx})">
-              <img src="${item.dataUrl}" alt="${item.title}" class="w-full h-32 object-cover">
-              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2">
+      flattenedPhotos.sort((a, b) => (b.rawTime || 0) - (a.rawTime || 0));
+
+      if (albumGrid) {
+        albumGrid.innerHTML = flattenedPhotos.map(item => `
+          <div class="glass-card rounded-2xl overflow-hidden border-white/10 p-2 space-y-2">
+            <div class="relative rounded-xl overflow-hidden aspect-[9/16] group cursor-pointer tap-effect" onclick="openRideStoryLightbox('${item.slotId}', ${item.photoIndex})">
+              <img src="${item.dataUrl}" class="w-full h-full object-cover" alt="${item.title}">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent flex flex-col justify-between p-2">
+                <span class="text-[9px] font-mono text-cyan-300 font-bold px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md self-start border border-white/10">Story</span>
                 <span class="text-[9px] font-mono text-amber-300 font-bold truncate">${item.timestamp}</span>
               </div>
             </div>
@@ -2369,27 +2679,69 @@
       }
     }
 
-    // ================= PHOTO CAPTURE & ACTION SHEET WORKFLOW =================
-    function triggerRideStoryCapture(rideId) {
-      photoTargetType = 'ride';
-      photoTargetId = rideId;
-      const ride = allDisneyRides.find(r => r.id === rideId);
-      openPhotoSourceModal(ride ? `Story: ${ride.name}` : 'Add Ride Story');
+    // ================= TAB SWITCHING & CLOCK =================
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-view').forEach(view => view.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-amber-400');
+        btn.classList.add('text-slate-400');
+        const icon = btn.querySelector('i');
+        if (icon) icon.className = icon.className.replace('ph-fill', 'ph-bold');
+      });
+
+      const targetView = document.getElementById('view-' + tabName);
+      if (targetView) targetView.classList.remove('hidden');
+
+      const targetBtn = document.getElementById('nav-' + tabName);
+      if (targetBtn) {
+        targetBtn.classList.remove('text-slate-400');
+        targetBtn.classList.add('text-amber-400');
+        const icon = targetBtn.querySelector('i');
+        if (icon) icon.className = icon.className.replace('ph-bold', 'ph-fill');
+      }
+
+      if (tabName === 'rides') renderAllRidesView();
+      if (tabName === 'timeline') renderTimeline();
+      if (tabName === 'llmp') renderLLMPDeck();
+      if (tabName === 'todo') renderTodoList();
+      if (tabName === 'album') renderAlbumView();
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function triggerTimelineStoryCapture(cardId) {
-      photoTargetType = 'timeline';
-      photoTargetId = cardId;
-      const card = disneyCards.find(c => c.id === cardId);
-      openPhotoSourceModal(card ? `Story: ${card.title}` : 'Add Stop Story');
+    function switchPhase(phaseKey) {
+      activeCardPhase = phaseKey;
+      document.querySelectorAll('.phase-pill').forEach(pill => {
+        pill.classList.remove('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+        pill.classList.add('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+      });
+      const activePill = document.getElementById('pill-' + phaseKey);
+      if (activePill) {
+        activePill.classList.remove('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
+        activePill.classList.add('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
+      }
+      renderTimeline();
     }
 
-    function triggerFoodPhotoUpload(foodId) {
-      photoTargetType = 'food';
-      photoTargetId = foodId;
-      openPhotoSourceModal('Capture Food Photo');
+    function updateAnaheimClock() {
+      const el = document.getElementById('anaheimClock');
+      if (!el) return;
+      try {
+        const timeStr = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/Los_Angeles',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }).format(new Date());
+        el.textContent = `${timeStr} PST`;
+      } catch (e) {
+        el.textContent = 'PST';
+      }
     }
+    setInterval(updateAnaheimClock, 1000);
+    updateAnaheimClock();
 
+    // ================= PHOTO & STORY CAPTURE PIPELINE =================
     function openPhotoSourceModal(title = 'Add Disney Story') {
       const modal = document.getElementById('photoSourceModal');
       const titleEl = document.getElementById('photoSourceTitle');
@@ -2422,34 +2774,56 @@
       }
     }
 
+    function triggerRideStoryCapture(rideId) {
+      photoTargetType = 'ride';
+      photoTargetId = rideId;
+      const ride = allDisneyRides.find(r => r.id === rideId);
+      openPhotoSourceModal(ride ? `Story: ${ride.name}` : 'Add Ride Story');
+    }
+
+    function triggerTimelineStoryCapture(cardId) {
+      photoTargetType = 'timeline';
+      photoTargetId = cardId;
+      const card = disneyCards.find(c => c.id === cardId);
+      openPhotoSourceModal(card ? `Story: ${card.title}` : 'Add Itinerary Story');
+    }
+
+    function triggerFoodPhotoUpload(foodId) {
+      photoTargetType = 'food';
+      photoTargetId = foodId;
+      openPhotoSourceModal('Snap Park Food Dish');
+    }
+
+    // Process photo from either camera or gallery
     async function handleSelectedPhoto(e) {
       const file = e.target.files && e.target.files[0];
       if (!file || !photoTargetId) return;
 
       showToast('Processing photo...');
-      window.setCloudStatus('Processing...', 'text-amber-400');
+      window.setCloudStatus('Syncing photo...', 'text-amber-400');
 
       try {
         const compressedData = await compressImageFile(file, 900, 900, 0.72);
-        const timestamp = new Intl.DateTimeFormat('en-US', {
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        }).format(new Date());
+        const now = new Date();
+        const dateOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
+        const formattedTimestamp = new Intl.DateTimeFormat('en-US', dateOptions).format(now);
 
-        let targetTitle = 'Disney Magic';
+        let targetTitle = 'Disney Moment';
         if (photoTargetType === 'ride') {
           const ride = allDisneyRides.find(r => r.id === photoTargetId);
-          if (ride) targetTitle = ride.name;
-          riddenRidesSet.add(photoTargetId);
-          saveRidesStorage();
+          if (ride) {
+            targetTitle = ride.name;
+            riddenRidesSet.add(photoTargetId);
+            saveRidesStorage();
+          }
         } else if (photoTargetType === 'timeline') {
           const card = disneyCards.find(c => c.id === photoTargetId);
           if (card) targetTitle = card.title;
+        } else if (photoTargetType === 'todo') {
+          const todo = todoItems.find(t => t.id === photoTargetId);
+          if (todo) targetTitle = todo.title;
         } else if (photoTargetType === 'food') {
-          targetTitle = photoTargetId.replace('-', ' ').toUpperCase();
+          targetTitle = photoTargetId;
           const img = document.getElementById('img-' + photoTargetId);
           const badge = document.getElementById('badge-' + photoTargetId);
           if (img) img.src = compressedData;
@@ -2465,31 +2839,30 @@
           checkinData[photoTargetId].photos = [];
         }
 
-        const newPhotoObj = {
+        checkinData[photoTargetId].title = targetTitle;
+        checkinData[photoTargetId].photos.push({
           id: 'p-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
           dataUrl: compressedData,
-          checkinTimestamp: timestamp,
+          checkinTimestamp: formattedTimestamp,
           rawTime: Date.now()
-        };
-
-        checkinData[photoTargetId].photos.push(newPhotoObj);
-        checkinData[photoTargetId].title = targetTitle;
+        });
 
         saveStorage();
-        renderAllRidesView();
-        renderTimeline();
-        renderAlbumView();
 
         if (window.syncCheckinToFirebase) {
           await window.syncCheckinToFirebase(photoTargetId, checkinData[photoTargetId]);
         }
 
-        showToast('Story photo added & synced! 📸✨');
+        renderAllRidesView();
+        renderTimeline();
+        renderTodoList();
+        renderAlbumView();
+        showToast('Vertical story saved & synced! 📸☁️');
         window.setCloudStatus('Cloud Sync', 'text-emerald-400');
       } catch (err) {
-        console.error("Photo error:", err);
-        showToast(err.message || 'Could not load photo');
-        window.setCloudStatus('Sync Error', 'text-rose-400');
+        console.error('Photo processing error:', err);
+        showToast('Could not process photo');
+        window.setCloudStatus('Sync error', 'text-rose-400');
       } finally {
         e.target.value = '';
       }
@@ -2498,83 +2871,26 @@
     document.getElementById('directCameraInput').addEventListener('change', handleSelectedPhoto);
     document.getElementById('generalPhotoPicker').addEventListener('change', handleSelectedPhoto);
 
-    // ================= TAB NAVIGATION & UTILS =================
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-view').forEach(v => v.classList.add('hidden'));
-      document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('text-amber-400');
-        btn.classList.add('text-slate-400');
-        const icon = btn.querySelector('i');
-        if (icon) icon.className = icon.className.replace('ph-fill', 'ph-bold');
-      });
-
-      const targetView = document.getElementById('view-' + tabName);
-      if (targetView) targetView.classList.remove('hidden');
-
-      const targetBtn = document.getElementById('nav-' + tabName);
-      if (targetBtn) {
-        targetBtn.classList.remove('text-slate-400');
-        targetBtn.classList.add('text-amber-400');
-        const icon = targetBtn.querySelector('i');
-        if (icon) icon.className = icon.className.replace('ph-bold', 'ph-fill');
-      }
-
-      if (tabName === 'map') initResortMap();
-      if (tabName === 'rides') renderAllRidesView();
-      if (tabName === 'timeline') renderTimeline();
-      if (tabName === 'album') renderAlbumView();
-      if (tabName === 'llmp') renderLLMPDeck();
-
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function switchPhase(phaseKey) {
-      activeCardPhase = phaseKey;
-      document.querySelectorAll('.phase-pill').forEach(pill => {
-        pill.classList.remove('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
-        pill.classList.add('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
-      });
-      const activePill = document.getElementById('pill-' + phaseKey);
-      if (activePill) {
-        activePill.classList.remove('bg-disney-card', 'text-slate-300', 'border', 'border-white/10');
-        activePill.classList.add('bg-amber-400', 'text-disney-midnight', 'shadow-md', 'shadow-amber-500/20');
-      }
-      renderTimeline();
-    }
-
-    function updateAnaheimClock() {
-      const clockEl = document.getElementById('anaheimClock');
-      if (!clockEl) return;
-      try {
-        const timeStr = new Intl.DateTimeFormat('en-US', {
-          timeZone: 'America/Los_Angeles',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        }).format(new Date());
-        clockEl.textContent = `${timeStr} PST`;
-      } catch (e) {
-        clockEl.textContent = 'PST';
-      }
-    }
-    setInterval(updateAnaheimClock, 1000);
-
+    // Toast Alert Helper
     function showToast(msg) {
       const toast = document.getElementById('toast');
       const toastMsg = document.getElementById('toastMsg');
       if (!toast || !toastMsg) return;
       toastMsg.textContent = msg;
       toast.classList.remove('opacity-0', 'pointer-events-none');
-      setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 2200);
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2400);
     }
 
-    // App Initialization
+    // Initialize App On Load
     window.addEventListener('DOMContentLoaded', () => {
       loadStorage();
       loadRidesStorage();
       renderAllRidesView();
       renderTimeline();
       renderLLMPDeck();
+      renderTodoList();
       renderAlbumView();
       updateAnaheimClock();
     });
@@ -2592,7 +2908,6 @@
       onSnapshot 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Firebase Project Configuration
     const firebaseConfig = {
       apiKey: "AIzaSyAoSe3ptwtsq-AznzSy8hk2F6WrbRGumeM",
       authDomain: "vegassayhi.firebaseapp.com",
@@ -2609,101 +2924,86 @@
       db = getFirestore(app);
       window.setCloudStatus('Cloud Sync', 'text-emerald-400');
     } catch (e) {
-      console.warn("Firebase initialization notice:", e);
-      window.setCloudStatus('Local Mode', 'text-slate-400');
+      console.warn("Firebase offline mode:", e);
+      window.setCloudStatus('Offline Mode', 'text-slate-400');
     }
 
     if (db) {
-      // 1. Real-time Listener for Ridden Rides Checkmarks
-      onSnapshot(doc(db, "disney_trip", "ridden_rides"), (docSnap) => {
+      // 1. Listen for rides check-off changes
+      onSnapshot(doc(db, "disney_trip", "rides"), (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          if (Array.isArray(data.rides)) {
-            const incomingSet = new Set(data.rides);
-            if (JSON.stringify(Array.from(incomingSet).sort()) !== JSON.stringify(Array.from(riddenRidesSet).sort())) {
-              riddenRidesSet = incomingSet;
-              try {
-                localStorage.setItem('disney_ridden_rides_v1', JSON.stringify(Array.from(riddenRidesSet)));
-              } catch (err) {}
-              renderAllRidesView();
-            }
+          if (Array.isArray(data.ridden)) {
+            riddenRidesSet = new Set(data.ridden);
+            localStorage.setItem('disney_ridden_rides_v1', JSON.stringify(data.ridden));
+            renderAllRidesView();
+            renderAlbumView();
           }
         }
-      }, (err) => console.warn("Rides cloud sync notice:", err));
+      }, err => console.warn("Rides sync notice:", err));
 
-      // 2. Real-time Listener for Check-Ins & Instagram Stories
+      // 2. Listen for checkin stories across all devices
       onSnapshot(doc(db, "disney_trip", "checkins"), (docSnap) => {
         if (docSnap.exists()) {
-          const cloudCheckins = docSnap.data() || {};
+          const cloudCheckins = docSnap.data();
           let changed = false;
-
           Object.keys(cloudCheckins).forEach(slotId => {
-            const remoteEntry = cloudCheckins[slotId];
-            const localEntry = checkinData[slotId];
-            if (!localEntry || JSON.stringify(localEntry) !== JSON.stringify(remoteEntry)) {
-              checkinData[slotId] = remoteEntry;
+            const cloudEntry = cloudCheckins[slotId];
+            if (cloudEntry && JSON.stringify(cloudEntry) !== JSON.stringify(checkinData[slotId])) {
+              checkinData[slotId] = cloudEntry;
               changed = true;
             }
           });
-
-          // Check for deleted items
           Object.keys(checkinData).forEach(slotId => {
             if (!cloudCheckins[slotId]) {
               delete checkinData[slotId];
               changed = true;
             }
           });
-
           if (changed) {
             saveStorage();
-            renderTimeline();
             renderAllRidesView();
+            renderTimeline();
+            renderTodoList();
             renderAlbumView();
           }
         }
-      }, (err) => console.warn("Check-in cloud sync notice:", err));
+      }, err => console.warn("Checkins sync notice:", err));
 
-      // 3. Real-time Listener for Timeline Schedule Cards
-      onSnapshot(doc(db, "disney_trip", "itinerary"), (docSnap) => {
+      // 3. Listen for To-Do list updates
+      onSnapshot(doc(db, "disney_trip", "todos"), (docSnap) => {
         if (docSnap.exists()) {
-          const cloudPlan = docSnap.data();
-          if (cloudPlan && Array.isArray(cloudPlan.cards) && cloudPlan.cards.length > 0) {
-            if (JSON.stringify(disneyCards) !== JSON.stringify(cloudPlan.cards)) {
-              disneyCards = cloudPlan.cards;
-              saveStorage();
-              renderTimeline();
-            }
+          const cloudTodos = docSnap.data();
+          if (Array.isArray(cloudTodos.items)) {
+            todoItems = cloudTodos.items;
+            localStorage.setItem('disney_todos_v1', JSON.stringify(todoItems));
+            renderTodoList();
           }
         }
-      }, (err) => console.warn("Itinerary cloud sync notice:", err));
+      }, err => console.warn("Todos sync notice:", err));
     }
 
-    // Cloud Sync Global API Hooks
+    // Global Firebase Sync Helpers
     window.syncRiddenRidesToFirebase = async function() {
       if (!db) return;
       try {
-        window.setCloudStatus('Syncing...', 'text-amber-400');
-        await setDoc(doc(db, "disney_trip", "ridden_rides"), {
-          rides: Array.from(riddenRidesSet),
+        await setDoc(doc(db, "disney_trip", "rides"), {
+          ridden: Array.from(riddenRidesSet),
           updatedAt: Date.now()
         }, { merge: true });
-        window.setCloudStatus('Cloud Sync', 'text-emerald-400');
       } catch (err) {
-        console.error("Firebase sync error:", err);
-        window.setCloudStatus('Sync Error', 'text-rose-400');
+        console.warn("Firebase sync rides error:", err);
       }
     };
 
     window.syncCheckinToFirebase = async function(slotId, checkinObj) {
       if (!db) return;
       try {
-        window.setCloudStatus('Syncing Story...', 'text-amber-400');
         await setDoc(doc(db, "disney_trip", "checkins"), {
           [slotId]: checkinObj
         }, { merge: true });
-        window.setCloudStatus('Cloud Sync', 'text-emerald-400');
       } catch (err) {
-        console.error("Firebase sync checkin error:", err);
+        console.warn("Firebase sync checkin error:", err);
       }
     };
 
@@ -2714,33 +3014,20 @@
           [slotId]: deleteField()
         });
       } catch (err) {
-        console.error("Firebase delete checkin error:", err);
+        console.warn("Firebase delete checkin error:", err);
       }
     };
 
-    window.syncItineraryToFirebase = async function(cardsList) {
+    window.syncTodosToFirebase = async function(todosList) {
       if (!db) return;
       try {
-        await setDoc(doc(db, "disney_trip", "itinerary"), {
-          cards: cardsList,
+        await setDoc(doc(db, "disney_trip", "todos"), {
+          items: todosList,
           updatedAt: Date.now()
         }, { merge: true });
       } catch (err) {
-        console.error("Firebase sync itinerary error:", err);
+        console.warn("Firebase sync todos error:", err);
       }
-    };
-
-    // Attach hooks to state changes
-    const originalSaveRidesStorage = window.saveRidesStorage;
-    window.saveRidesStorage = function() {
-      if (typeof originalSaveRidesStorage === 'function') originalSaveRidesStorage();
-      window.syncRiddenRidesToFirebase();
-    };
-
-    const originalSaveStorage = window.saveStorage;
-    window.saveStorage = function() {
-      if (typeof originalSaveStorage === 'function') originalSaveStorage();
-      if (window.syncItineraryToFirebase) window.syncItineraryToFirebase(disneyCards);
     };
   </script>
 </body>
